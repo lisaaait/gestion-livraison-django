@@ -1,0 +1,23 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.egg-info
+*.sqlite3
+
+# Django stuff
+media/
+staticfiles/
+*.log
+
+# Environment
+.env
+
+# Git
+.git
+.gitignore
+
+# Docker
+docker-compose.override.yml
