@@ -1,0 +1,108 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+
+/* ------------------------- */
+/* Navbar & Home hero styles */
+/* ------------------------- */
+.navbar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.nav-left .nav-logo {
+  height: 56px;
+  width: auto;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.nav-center {
+  list-style: none;
+  display: flex;
+  gap: 2.5rem;
+  justify-self: center;
+  margin: 0;
+  padding: 0;
+}
+.nav-center a {
+  text-decoration: none;
+  color: #111;
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.nav-right .login-btn {
+  background: #b48a72;
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 30px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.home-hero {
+  padding: 4rem 2rem;
+  text-align: center;
+}
+.hero-title {
+  font-size: 2rem;
+  margin: 0 0 1rem 0;
+}
+.hero-tagline {
+  font-size: 1.25rem;
+  color: #555;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+@media (max-width: 720px) {
+  .nav-center { display: none; }
+  .nav-left .nav-logo { height: 48px; }
+  .hero-title { font-size: 1.5rem; }
+}
