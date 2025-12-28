@@ -49,15 +49,29 @@ class Expedition(models.Model):
         verbose_name="Statut"
     )
     
-    # Clé étrangère vers CLIENT (sera NULL pour l'instant)
-    code_client = models.IntegerField(
+    # ✅ ForeignKey vers Client
+    code_client = models.ForeignKey(
+        'clients.Client',
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        verbose_name="Code Client",
-        help_text="Référence au client (FK vers table CLIENT)"
+        verbose_name="Client",
+        related_name='expeditions',
+        help_text="Client qui envoie le colis"
     )
     
-    # Informations complémentaires utiles
+    # ✅ ForeignKey vers Tarification
+    tarification = models.ForeignKey(
+        'logistique.Tarification',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Tarification",
+        related_name='expeditions',
+        help_text="Tarif appliqué pour cette expédition"
+    )
+    
+    # Informations complémentaires
     date_creation = models.DateTimeField(
         auto_now_add=True,
         verbose_name="Date de création"
@@ -75,7 +89,7 @@ class Expedition(models.Model):
         help_text="Description détaillée du contenu"
     )
     
-    # Montant calculé (sera calculé via tarification)
+    # Montant calculé automatiquement
     montant_estime = models.DecimalField(
         max_digits=10,
         decimal_places=2,
@@ -99,17 +113,30 @@ class Expedition(models.Model):
     def __str__(self):
         return f"EXP-{self.numexp} - {self.get_statut_display()}"
     
+    def save(self, *args, **kwargs):
+        """
+        Calcul automatique du montant estimé
+        Formule : Montant = Tarif base + (Poids × Tarif poids) + (Volume × Tarif volume)
+        """
+        if self.tarification:
+            p_dec = Decimal(str(self.poids))
+            v_dec = Decimal(str(self.volume))
+            self.montant_estime = (
+                self.tarification.tarif_base_destination + 
+                (p_dec * self.tarification.tarif_poids) + 
+                (v_dec * self.tarification.tarif_volume)
+            )
+        super().save(*args, **kwargs)
+    
     def peut_etre_modifie(self):
         """
         Vérifie si l'expédition peut encore être modifiée.
-        Une expédition ne peut pas être modifiée si elle est déjà en tournée.
         """
         return self.statut in ['EN_ATTENTE', 'EN_PREPARATION']
     
     def peut_etre_supprime(self):
         """
         Vérifie si l'expédition peut être supprimée.
-        Une expédition ne peut pas être supprimée si elle est facturée.
         """
         return not self.etre_facture_set.exists()
 
@@ -117,10 +144,8 @@ class Expedition(models.Model):
 class Incident(models.Model):
     """
     Modèle pour gérer les incidents liés aux expéditions.
-    Permet de suivre les problèmes survenus pendant le transport.
     """
     
-    # Choix pour le type d'incident
     TYPE_CHOICES = [
         ('RETARD', 'Retard de livraison'),
         ('PERTE', 'Colis perdu'),
@@ -133,7 +158,6 @@ class Incident(models.Model):
         ('AUTRE', 'Autre'),
     ]
     
-    # Choix pour l'état de l'incident
     ETAT_CHOICES = [
         ('OUVERT', 'Ouvert'),
         ('EN_COURS', 'En cours de traitement'),
@@ -180,7 +204,7 @@ class Incident(models.Model):
         help_text="Description de la solution apportée"
     )
     
-    # Clé étrangère vers EXPEDITION
+    # FK vers EXPEDITION
     numexp = models.ForeignKey(
         Expedition,
         on_delete=models.CASCADE,
@@ -188,7 +212,6 @@ class Incident(models.Model):
         related_name='incidents'
     )
     
-    # Dates de suivi
     date_creation = models.DateTimeField(
         auto_now_add=True,
         verbose_name="Date de signalement"
@@ -216,16 +239,12 @@ class Incident(models.Model):
     
     def save(self, *args, **kwargs):
         """
-        Override de save pour mettre à jour automatiquement le statut de l'expédition
-        en cas d'incident grave.
+        Met à jour le statut de l'expédition en cas d'incident grave.
         """
-        # Si l'incident est de type PERTE ou ENDOMMAGEMENT, 
-        # on peut marquer l'expédition comme échec
         if self.type in ['PERTE', 'ENDOMMAGEMENT'] and self.etat == 'RESOLU':
             self.numexp.statut = 'ECHEC_LIVRAISON'
             self.numexp.save()
         
-        # Mettre la date de résolution si l'état passe à RESOLU ou FERME
         if self.etat in ['RESOLU', 'FERME'] and not self.date_resolution:
             from django.utils import timezone
             self.date_resolution = timezone.now()
