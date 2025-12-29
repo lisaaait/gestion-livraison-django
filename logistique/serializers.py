@@ -32,3 +32,8 @@ class TourneeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tournee
         fields = '__all__'
+
+class ExpeditionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Expedition
+        fields = '__all__'
