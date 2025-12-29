@@ -4,6 +4,12 @@ from rest_framework.routers import DefaultRouter
 from expeditions.views import ExpeditionViewSet, IncidentViewSet
 from facturation.views import FactureViewSet, PaiementViewSet, EtreFactureViewSet
 
+from clients.views import ClientViewSet,HistoriqueViewSet,ReclamationViewSet,RapportViewSet, ContientViewSet
+
+
+
+
+
 # Création d’un router global
 router = DefaultRouter()
 # Routes pour l’app Expeditions
@@ -14,6 +20,15 @@ router.register('incidents', IncidentViewSet, basename='incident')
 router.register('factures', FactureViewSet, basename='facture')
 router.register('paiements', PaiementViewSet, basename='paiement')
 router.register('expeditions-facturees', EtreFactureViewSet, basename='etre-facture')
+
+#routes pour lapp clients 
+
+router.register('clients', ClientViewSet, basename='client')
+router.register('historiques', HistoriqueViewSet, basename='historique')
+router.register('reclamations', ReclamationViewSet, basename='reclamation')
+router.register('rapports', RapportViewSet, basename='rapport')
+router.register('contient', ContientViewSet, basename='contient')
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
