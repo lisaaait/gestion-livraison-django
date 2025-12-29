@@ -2,6 +2,8 @@ from django.db import models
 from django.core.validators import MinValueValidator, RegexValidator
 from django.core.exceptions import ValidationError
 from decimal import Decimal
+from django.contrib.auth.models import AbstractUser
+from django.db import models
 
 # --- VALIDATEURS ---
 valideur_permis = RegexValidator(regex=r'^[0-9]{10}$', message="Le permis doit contenir exactement 10 chiffres.")
@@ -113,3 +115,21 @@ class Tournee(models.Model):
             self.chauffeur.statut_dispo = False
             self.chauffeur.save()
         super().save(*args, **kwargs)
+
+class Utilisateur(AbstractUser):
+    # L'e-mail est obligatoire et unique pour la connexion 
+    email = models.EmailField(unique=True)
+    
+    # Définition des rôles pour l'autorisation par rôle 
+    ROLES = (
+        ('AGENT_LOGISTIQUE', 'Agent de Transport / Logistique'),
+        ('ADMIN', 'Administrateur'),
+    )
+    role = models.CharField(max_length=20, choices=ROLES, default='AGENT_LOGISTIQUE')
+
+    # Configuration pour utiliser l'email à la place du username
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username'] 
+
+    def __str__(self):
+        return self.email
