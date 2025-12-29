@@ -1,9 +1,18 @@
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+
+# Imports des vues de tes collègues
 from expeditions.views import ExpeditionViewSet, IncidentViewSet
 from facturation.views import FactureViewSet, PaiementViewSet, EtreFactureViewSet
 
+# Imports de TES vues (Logistique)
+from logistique.api_views import (
+    ChauffeurViewSet, VehiculeViewSet, DestinationViewSet, 
+    TarificationViewSet, TourneeViewSet
+)
+
+# Création du router global unique
 from clients.views import ClientViewSet,HistoriqueViewSet,ReclamationViewSet,RapportViewSet, ContientViewSet
 
 
@@ -12,11 +21,19 @@ from clients.views import ClientViewSet,HistoriqueViewSet,ReclamationViewSet,Rap
 
 # Création d’un router global
 router = DefaultRouter()
-# Routes pour l’app Expeditions
+
+# 1. Routes de l'app Logistique (Ton travail)
+router.register('chauffeurs', ChauffeurViewSet, basename='chauffeur')
+router.register('vehicules', VehiculeViewSet, basename='vehicule')
+router.register('destinations', DestinationViewSet, basename='destination')
+router.register('tarifs', TarificationViewSet, basename='tarif')
+router.register('tournees', TourneeViewSet, basename='tournee')
+
+# 2. Routes de l'app Expeditions (Travail collègue)
 router.register('expeditions', ExpeditionViewSet, basename='expedition')
 router.register('incidents', IncidentViewSet, basename='incident')
 
-# Routes pour l’app Facturation
+# 3. Routes de l'app Facturation (Travail collègue)
 router.register('factures', FactureViewSet, basename='facture')
 router.register('paiements', PaiementViewSet, basename='paiement')
 router.register('expeditions-facturees', EtreFactureViewSet, basename='etre-facture')
@@ -34,5 +51,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('home/', include('dashboard.urls')),
-    path('api/', include(router.urls)),  # Toutes les API passent par ce router
+    path('api/', include(router.urls)), 
 ]

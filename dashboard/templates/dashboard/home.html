@@ -2,6 +2,13 @@
 <html>
 <head>
     <title>Dashboard</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; padding: 20px; color: #333; }
+        h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 30px; }
+        ul { list-style-type: none; padding: 0; }
+        li { background: #f9f9f9; margin-bottom: 5px; padding: 10px; border-left: 5px solid #3498db; }
+        .empty { color: #e74c3c; font-style: italic; list-style-type: none; background: none; border: none; }
+    </style>
 </head>
 <body>
     <h1>Dashboard - All Data</h1>
@@ -9,36 +16,72 @@
     <h2>Clients</h2>
     <ul>
         {% for client in clients %}
-            <li>{{ client.name }} - {{ client.email }}</li>
+            <li><strong>{{ client.name }}</strong> - {{ client.email }}</li>
         {% empty %}
-            <li>No clients found</li>
+            <li class="empty">No clients found</li>
         {% endfor %}
     </ul>
 
-    <h2>Expeditions</h2>
+    <h2>Destinations</h2>
+    <ul>
+        {% for dest in destinations %}
+            <li>{{ dest.ville }} ({{ dest.pays }}) - Zone: {{ dest.zone_geo }} [Code: {{ dest.code_d }}]</li>
+        {% empty %}
+            <li class="empty">No destinations found</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Chauffeurs</h2>
+    <ul>
+        {% for chauffeur in chauffeurs %}
+            <li><strong>{{ chauffeur.nom }}</strong> - Permis: {{ chauffeur.categorie_permis }} - Statut: {% if chauffeur.statut_dispo %}Libre{% else %}En mission{% endif %}</li>
+        {% empty %}
+            <li class="empty">No chauffeurs found</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Véhicules</h2>
+    <ul>
+        {% for vehicule in vehicules %}
+            <li>{{ vehicule.matricule }} - {{ vehicule.type_vehicule }} (Capacité: {{ vehicule.capacite_poids }}kg)</li>
+        {% empty %}
+            <li class="empty">No vehicles found</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Tarifications</h2>
+    <ul>
+        {% for tarif in tarifications %}
+            <li>{{ tarif.type_service }} - {{ tarif.destination.ville }} (Base: {{ tarif.tarif_base_destination }} DA)</li>
+        {% empty %}
+            <li class="empty">No tarifications found</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Expéditions</h2>
     <ul>
         {% for exp in expeditions %}
-            <li>{{ exp.tracking_number }} - {{ exp.status }}</li>
+            <li>Réf: {{ exp.numexp }} - Poids: {{ exp.poids }}kg - <strong>Estimation: {{ exp.montant_estime }} DA</strong></li>
         {% empty %}
-            <li>No expeditions found</li>
+            <li class="empty">No expeditions found</li>
         {% endfor %}
     </ul>
 
     <h2>Invoices</h2>
     <ul>
         {% for inv in invoices %}
-            <li>{{ inv.id }} - {{ inv.total_amount }}</li>
+            <li>ID: {{ inv.id }} - Montant Total: {{ inv.total_amount }}</li>
         {% empty %}
-            <li>No invoices found</li>
+            <li class="empty">No invoices found</li>
         {% endfor %}
     </ul>
 
     <h2>Tours</h2>
     <ul>
         {% for tour in tours %}
-            <li>{{ tour.id }} - {{ tour.driver }}</li>
+            <li>Code: {{ tour.code_t }} - Chauffeur: {{ tour.chauffeur.nom }} - Véhicule: {{ tour.vehicule.matricule }}</li>
         {% empty %}
-            <li>No tours found</li>
+            <li class="empty">No tours found</li>
         {% endfor %}
     </ul>
 </body>

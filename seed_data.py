@@ -3,10 +3,10 @@ import django
 from datetime import date
 
 # Configuration Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'transport_system.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
-from gestion_transport.models import Destination, Tarification, Chauffeur, Vehicule, Expedition, Tournee
+from logistique.models import Destination, Tarification, Chauffeur, Vehicule, Expedition, Tournee
 from django.core.exceptions import ValidationError
 
 def run_seed():
