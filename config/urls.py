@@ -1,26 +1,23 @@
-"""
-URL configuration for config project.
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
-"""
 from django.contrib import admin
-from django.urls import path,include
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from expeditions.views import ExpeditionViewSet, IncidentViewSet
+from facturation.views import FactureViewSet, PaiementViewSet, EtreFactureViewSet
+
+# Création d’un router global
+router = DefaultRouter()
+# Routes pour l’app Expeditions
+router.register('expeditions', ExpeditionViewSet, basename='expedition')
+router.register('incidents', IncidentViewSet, basename='incident')
+
+# Routes pour l’app Facturation
+router.register('factures', FactureViewSet, basename='facture')
+router.register('paiements', PaiementViewSet, basename='paiement')
+router.register('expeditions-facturees', EtreFactureViewSet, basename='etre-facture')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-   path('accounts/', include('accounts.urls')),  
-    path('home', include('dashboard.urls')),
-   
-
+    path('accounts/', include('accounts.urls')),
+    path('home/', include('dashboard.urls')),
+    path('api/', include(router.urls)),  # Toutes les API passent par ce router
 ]
