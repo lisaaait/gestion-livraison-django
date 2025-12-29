@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+    <h1>Dashboard - All Data</h1>
+
+    <h2>Clients</h2>
+    <ul>
+        {% for client in clients %}
+            <li>{{ client.name }} - {{ client.email }}</li>
+        {% empty %}
+            <li>No clients found</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Expeditions</h2>
+    <ul>
+        {% for exp in expeditions %}
+            <li>{{ exp.tracking_number }} - {{ exp.status }}</li>
+        {% empty %}
+            <li>No expeditions found</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Invoices</h2>
+    <ul>
+        {% for inv in invoices %}
+            <li>{{ inv.id }} - {{ inv.total_amount }}</li>
+        {% empty %}
+            <li>No invoices found</li>
+        {% endfor %}
+    </ul>
+
+    <h2>Tours</h2>
+    <ul>
+        {% for tour in tours %}
+            <li>{{ tour.id }} - {{ tour.driver }}</li>
+        {% empty %}
+            <li>No tours found</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>
