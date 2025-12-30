@@ -139,10 +139,6 @@ class Facture(models.Model):
         self.save(update_fields=['est_payee'])
     
     def save(self, *args, **kwargs):
-        """
-        Calcule automatiquement HT, TVA et TTC.
-        """
-        self.calculer_montants()
         super().save(*args, **kwargs)
 
 
@@ -298,14 +294,10 @@ class EtreFacture(models.Model):
                 )
     
     def save(self, *args, **kwargs):
-        """
-        Recalcule le montant de la facture après ajout d'une expédition.
-        """
-        self.full_clean()
         super().save(*args, **kwargs)
         self.code_facture.calculer_montant_depuis_expeditions()
-        self.code_facture.save()
-    
+        self.code_facture.save(update_fields=['ht', 'tva', 'ttc'])
+
     def delete(self, *args, **kwargs):
         """
         Recalcule le montant de la facture après retrait d'une expédition.
