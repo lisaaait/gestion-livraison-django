@@ -126,6 +126,8 @@ class Expedition(models.Model):
                 (p_dec * self.tarification.tarif_poids) + 
                 (v_dec * self.tarification.tarif_volume)
             )
+        else:
+            self.montant_estime = None
         super().save(*args, **kwargs)
     
     def peut_etre_modifie(self):

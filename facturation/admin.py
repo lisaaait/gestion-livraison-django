@@ -68,7 +68,6 @@ class FactureAdmin(admin.ModelAdmin):
         }),
         ('Montants', {
             'fields': (
-                'montant',
                 'ht',
                 'tva',
                 'ttc',

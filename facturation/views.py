@@ -92,9 +92,7 @@ class FactureViewSet(viewsets.ModelViewSet):
         
         if serializer.is_valid():
             serializer.save()
-            # Recalculer les montants de la facture
-            facture.calculer_montant_depuis_expeditions()
-            facture.save()
+            facture.refresh_from_db()
             
             return Response(
                 FactureDetailSerializer(facture).data,
@@ -117,12 +115,12 @@ class PaiementViewSet(viewsets.ModelViewSet):
     ViewSet pour gérer les paiements.
     
     Endpoints:
-    - GET /api/paiements/ : Liste tous les paiements
+    s- GET /api/paiements/ : Liste tous les paiements
     - POST /api/paiements/ : Créer un paiement
     - GET /api/paiements/{id}/ : Détails d'un paiement
     - PUT /api/paiements/{id}/ : Modifier un paiement
     - DELETE /api/paiements/{id}/ : Supprimer un paiement
-    - GET /api/paiements/statistiques/ : Stats des paiements
+    - GET /api/paiements/statistiques/ : Stats des paiement
     """
     
     queryset = Paiement.objects.select_related('code_facture').all()
@@ -182,12 +180,4 @@ class EtreFactureViewSet(viewsets.ModelViewSet):
     
     def destroy(self, request, *args, **kwargs):
         """Recalculer le montant de la facture après suppression"""
-        instance = self.get_object()
-        facture = instance.code_facture
-        response = super().destroy(request, *args, **kwargs)
-        
-        # Recalculer les montants
-        facture.calculer_montant_depuis_expeditions()
-        facture.save()
-        
-        return response
+        return super().destroy(request, *args, **kwargs)
