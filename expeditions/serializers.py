@@ -64,7 +64,7 @@ class IncidentListSerializer(serializers.ModelSerializer):
         model = Incident
         fields = [
             'code_inc', 'type', 'type_display', 'etat', 'etat_display',
-            'numexp', 'expedition', 'date_creation'
+            'numexp', 'expedition', 'wilaya', 'commune', 'date_creation'
         ]
 
 
@@ -86,7 +86,7 @@ class IncidentCreateUpdateSerializer(serializers.ModelSerializer):
         model = Incident
         fields = [
             'type', 'commentaire', 'piece_jointe', 'etat',
-            'resolution', 'numexp'
+            'resolution', 'wilaya', 'commune', 'numexp'
         ]
     
     def validate_numexp(self, value):

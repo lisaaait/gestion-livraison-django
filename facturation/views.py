@@ -3,7 +3,10 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
+from decimal import Decimal
 from django.db.models import Sum, Count
+from django.db.models.functions import TruncMonth
+from django.utils import timezone
 from .models import Facture, Paiement, EtreFacture
 from .serializers import (
     FactureListSerializer,
@@ -15,6 +18,20 @@ from .serializers import (
     EtreFactureSerializer,
     EtreFactureCreateSerializer
 )
+
+def _add_months(dt, months):
+    month_index = dt.month - 1 + months
+    year = dt.year + month_index // 12
+    month = month_index % 12 + 1
+    return dt.replace(year=year, month=month, day=1)
+
+
+def _month_range(months):
+    now = timezone.now()
+    start = _add_months(now.replace(day=1, hour=0, minute=0, second=0, microsecond=0), -(months - 1))
+    end = _add_months(start, months)
+    month_starts = [_add_months(start, i) for i in range(months)]
+    return start, end, month_starts
 
 
 class FactureViewSet(viewsets.ModelViewSet):
@@ -65,6 +82,47 @@ class FactureViewSet(viewsets.ModelViewSet):
             'montant_reste_a_payer': float(total_ttc - total_paye)
         }
         return Response(stats)
+
+    @action(detail=False, methods=['get'])
+    def evolution_chiffre_affaires(self, request):
+        """Taux d'Ç¸volution mensuel du chiffre d'affaires"""
+        try:
+            months = int(request.query_params.get('months', 12))
+        except ValueError:
+            months = 12
+        if months < 1:
+            months = 1
+
+        start, end, month_starts = _month_range(months)
+        grouped = (
+            self.queryset.filter(date_f__gte=start.date(), date_f__lt=end.date())
+            .annotate(month=TruncMonth('date_f'))
+            .values('month')
+            .annotate(total=Sum('ttc'))
+            .order_by('month')
+        )
+        totals = {}
+        for item in grouped:
+            key = item['month'].strftime('%Y-%m')
+            totals[key] = item['total'] or Decimal('0.00')
+
+        data = []
+        prev_total = None
+        for month_start in month_starts:
+            key = month_start.strftime('%Y-%m')
+            total = totals.get(key, Decimal('0.00'))
+            if prev_total in (None, Decimal('0.00')):
+                evolution = None
+            else:
+                evolution = round(((total - prev_total) / prev_total) * 100, 2)
+            data.append({
+                'month': key,
+                'total_ttc': float(total),
+                'evolution_percent': float(evolution) if evolution is not None else None,
+            })
+            prev_total = total
+
+        return Response({'months': months, 'data': data})
     
     @action(detail=False, methods=['get'])
     def impayees(self, request):

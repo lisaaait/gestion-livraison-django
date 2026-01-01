@@ -206,6 +206,22 @@ class Incident(models.Model):
         help_text="Description de la solution apportée"
     )
     
+    wilaya = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Wilaya",
+        help_text="Wilaya oÇù l'incident a eu lieu"
+    )
+    
+    commune = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        verbose_name="Commune",
+        help_text="Commune oÇù l'incident a eu lieu"
+    )
+    
     # FK vers EXPEDITION
     numexp = models.ForeignKey(
         Expedition,
@@ -234,6 +250,8 @@ class Incident(models.Model):
             models.Index(fields=['type']),
             models.Index(fields=['etat']),
             models.Index(fields=['numexp']),
+            models.Index(fields=['wilaya']),
+            models.Index(fields=['commune']),
         ]
     
     def __str__(self):
