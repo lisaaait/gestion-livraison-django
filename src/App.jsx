@@ -6,6 +6,8 @@ import Expeditions from "./pages/admin/Expeditions";
 import Factures from "./pages/admin/Factures";
 import Clients from "./pages/admin/client";
 import Paiements from "./pages/admin/Paiements";
+import Reclamations from "./pages/admin/reclamation";
+import Incidents from "./pages/admin/Incidents";
 function App() {
   return (
     <Routes>
@@ -20,11 +22,14 @@ function App() {
         <Route path="expeditions" element={<Expeditions />} />
         <Route path="factures" element={<Factures />} />
         <Route path="paiements" element={<Paiements />} />
+         <Route path="reclamations" element={<Reclamations />} />
+        <Route path="incidents" element={<Incidents />} />
+        <Route path="paiements" element={<Paiements />} />
         {/* Routes vides pour les autres sections */}
         <Route path="clients" element={<ComingSoon title="Clients" />} />
         <Route path="factures" element={<ComingSoon title="Factures" />} />
         <Route path="paiements" element={<ComingSoon title="Paiements" />} />
-        <Route path="reclamations" element={<ComingSoon title="Réclamations" />} />
+       
         <Route path="tournees" element={<ComingSoon title="Tournées" />} />
         <Route path="destinations" element={<ComingSoon title="Destinations" />} />
         <Route path="tarification" element={<ComingSoon title="Tarification" />} />

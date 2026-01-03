@@ -1,123 +1,152 @@
+// src/pages/Paiements/Paiements.jsx
+import React, { useContext, useEffect, useState } from "react";
 import {
   Table,
   Button,
   Space,
-  Tag,
-  Input,
-  Card,
-  Empty,
   Modal,
   Form,
-  Select,
   InputNumber,
+  Select,
   DatePicker,
   message,
+  Input,
   Popconfirm,
-  Descriptions,
+  Card,
+  Tag,
+  Statistic,
   Row,
   Col,
-  Statistic,
+  Empty,
 } from "antd";
 import {
-  SearchOutlined,
-  DollarOutlined,
-  FilePdfOutlined,
-  EyeOutlined,
-  StopOutlined,
   PlusOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  DollarOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
-import { useContext, useEffect, useState } from "react";
+import dayjs from "dayjs";
 import { PaiementContext } from "../../context/PaiementContext";
 import { FactureContext } from "../../context/FactureContext";
-import dayjs from "dayjs";
-
-const { TextArea } = Input;
 
 const Paiements = () => {
-  const { paiements, statistiques, fetchPaiements, ajouterPaiement, annulerPaiement } =
-    useContext(PaiementContext);
+  const {
+    paiements,
+    loading,
+    fetchPaiements,
+    creerPaiement,
+    modifierPaiement,
+    supprimerPaiement,
+    fetchStatistiques,
+  } = useContext(PaiementContext);
+  
   const { factures, fetchFactures } = useContext(FactureContext);
 
-  const [searchText, setSearchText] = useState("");
-  const [detailsVisible, setDetailsVisible] = useState(false);
-  const [ajouterVisible, setAjouterVisible] = useState(false);
-  const [annulerVisible, setAnnulerVisible] = useState(false);
-  const [selectedPaiement, setSelectedPaiement] = useState(null);
   const [form] = Form.useForm();
-  const [annulerForm] = Form.useForm();
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingPaiement, setEditingPaiement] = useState(null);
+  const [searchText, setSearchText] = useState("");
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
     fetchPaiements();
     fetchFactures();
+    loadStatistiques();
   }, [fetchPaiements, fetchFactures]);
 
-  const filteredPaiements = paiements.filter(
-    (paiement) =>
-      paiement.reference.toLowerCase().includes(searchText.toLowerCase()) ||
-      paiement.numeroFacture.toLowerCase().includes(searchText.toLowerCase()) ||
-      paiement.clientNom.toLowerCase().includes(searchText.toLowerCase()) ||
-      paiement.modePaiement.toLowerCase().includes(searchText.toLowerCase())
-  );
-
-  const handleVoirDetails = (paiement) => {
-    setSelectedPaiement(paiement);
-    setDetailsVisible(true);
-  };
-
-  const handleAjouterPaiement = () => {
-    form.resetFields();
-    setAjouterVisible(true);
-  };
-
-  const handleAjouterSubmit = async (values) => {
-    const facture = factures.find((f) => f.id === values.factureId);
-    const paiement = {
-      factureId: values.factureId,
-      numeroFacture: facture.numeroFacture,
-      clientId: facture.clientId,
-      clientNom: facture.clientNom,
-      datePaiement: values.datePaiement.format("YYYY-MM-DD"),
-      montant: values.montant,
-      modePaiement: values.modePaiement,
-      commentaire: values.commentaire || "",
-    };
-
-    await ajouterPaiement(paiement);
-    message.success("Paiement enregistré avec succès");
-    setAjouterVisible(false);
-    form.resetFields();
-  };
-
-  const handleAnnulerPaiement = (paiement) => {
-    setSelectedPaiement(paiement);
-    annulerForm.resetFields();
-    setAnnulerVisible(true);
-  };
-
-  const handleAnnulerSubmit = async (values) => {
-    await annulerPaiement(selectedPaiement.id, values.motif);
-    message.success("Paiement annulé avec succès");
-    setAnnulerVisible(false);
-    annulerForm.resetFields();
-  };
-
-  const handleImprimerRecu = (paiement) => {
-    message.info(`Impression du reçu ${paiement.reference}`);
-    // Logique d'impression/PDF à implémenter
-  };
-
-  const getStatutColor = (statut) => {
-    switch (statut) {
-      case "validé":
-        return "green";
-      case "en attente":
-        return "orange";
-      case "annulé":
-        return "red";
-      default:
-        return "default";
+  const loadStatistiques = async () => {
+    try {
+      const data = await fetchStatistiques();
+      setStats(data);
+    } catch (err) {
+      console.error("Erreur chargement stats", err);
     }
   };
+
+  const openCreateModal = () => {
+    setEditingPaiement(null);
+    form.resetFields();
+    setModalVisible(true);
+  };
+
+  const openEditModal = (paiement) => {
+    setEditingPaiement(paiement);
+    form.setFieldsValue({
+      montant: paiement.montant,
+      mode: paiement.mode,
+      date: paiement.date ? dayjs(paiement.date) : dayjs(),
+      remarques: paiement.remarques,
+      code_facture: paiement.code_facture,
+      reference: paiement.reference,
+    });
+    setModalVisible(true);
+  };
+
+  const handleSubmit = async (values) => {
+    const data = {
+      code_facture: values.code_facture, // CORRECTION: envoyer code_facture (string)
+      date: values.date.format("YYYY-MM-DD"),
+      montant: values.montant,
+      mode: values.mode,
+      remarques: values.remarques || "",
+      // La référence est optionnelle, le backend la génère automatiquement
+      ...(values.reference && { reference: values.reference }),
+    };
+
+    try {
+      if (editingPaiement) {
+        await modifierPaiement(editingPaiement.id, data);
+        message.success("Paiement modifié avec succès");
+      } else {
+        await creerPaiement(data);
+        message.success("Paiement créé avec succès");
+      }
+      setModalVisible(false);
+      form.resetFields();
+      loadStatistiques();
+    } catch (err) {
+      console.error("Erreur détaillée:", err);
+      
+      // Extraire le message d'erreur du backend
+      const errorMsg = err.response?.data?.detail ||
+                       err.response?.data?.error ||
+                       err.response?.data?.montant_verse?.[0] ||
+                       err.response?.data?.code_facture?.[0] ||
+                       "Erreur lors de l'opération";
+      
+      message.error(errorMsg);
+      
+      // Log pour debug
+      if (err.response?.data?.traceback) {
+        console.error("Traceback serveur:", err.response.data.traceback);
+      }
+    }
+  };
+
+  const handleDelete = async (paiementId) => {
+    try {
+      await supprimerPaiement(paiementId);
+      message.success("Paiement supprimé");
+      loadStatistiques();
+    } catch (err) {
+      console.error(err);
+      const errorMsg = err.response?.data?.detail || "Erreur suppression paiement";
+      message.error(errorMsg);
+    }
+  };
+
+  // Trouver la facture correspondante
+  const getFactureInfo = (codeFacture) => {
+    const facture = factures.find((f) => f.code_facture === codeFacture);
+    return facture || null;
+  };
+
+  const filteredPaiements = paiements.filter((p) =>
+    p.reference?.toLowerCase().includes(searchText.toLowerCase()) ||
+    p.code_facture?.toLowerCase().includes(searchText.toLowerCase()) ||
+    p.remarques?.toLowerCase().includes(searchText.toLowerCase())
+  );
 
   const columns = [
     {
@@ -125,204 +154,178 @@ const Paiements = () => {
       dataIndex: "reference",
       key: "reference",
       width: 150,
-      sorter: (a, b) => a.reference.localeCompare(b.reference),
-      fixed: "left",
+      sorter: (a, b) => (a.reference || "").localeCompare(b.reference || ""),
     },
     {
       title: "Date",
-      dataIndex: "datePaiement",
-      key: "datePaiement",
+      dataIndex: "date",
+      key: "date",
       width: 120,
-      sorter: (a, b) => new Date(a.datePaiement) - new Date(b.datePaiement),
-    },
-    {
-      title: "Facture",
-      dataIndex: "numeroFacture",
-      key: "numeroFacture",
-      width: 150,
-    },
-    {
-      title: "Client",
-      dataIndex: "clientNom",
-      key: "clientNom",
-      width: 200,
+      sorter: (a, b) => new Date(a.date) - new Date(b.date),
     },
     {
       title: "Montant",
       dataIndex: "montant",
       key: "montant",
       width: 130,
-      sorter: (a, b) => a.montant - b.montant,
       render: (montant) => (
-        <strong style={{ color: "#52c41a", fontSize: 14 }}>
-          {montant.toLocaleString()} DA
+        <strong style={{ color: "#52c41a" }}>
+          {(montant || 0).toLocaleString()} DA
         </strong>
       ),
+      sorter: (a, b) => (a.montant || 0) - (b.montant || 0),
     },
     {
       title: "Mode",
-      dataIndex: "modePaiement",
-      key: "modePaiement",
+      dataIndex: "mode",
+      key: "mode",
       width: 150,
+      render: (mode, record) => (
+        <Tag color="blue">{record.modeDisplay || mode}</Tag>
+      ),
       filters: [
-        { text: "Espèces", value: "Espèces" },
-        { text: "Chèque", value: "Chèque" },
-        { text: "Virement", value: "Virement" },
-        { text: "Carte bancaire", value: "Carte bancaire" },
+        { text: "Espèces", value: "ESPECES" },
+        { text: "Chèque", value: "CHEQUE" },
+        { text: "Virement bancaire", value: "VIREMENT" },
+        { text: "Carte bancaire", value: "CARTE" },
+        { text: "Paiement mobile", value: "MOBILE" },
       ],
-      onFilter: (value, record) => record.modePaiement === value,
-      render: (mode) => {
-        const colors = {
-          Espèces: "gold",
-          Chèque: "blue",
-          Virement: "cyan",
-          "Carte bancaire": "purple",
-        };
-        return <Tag color={colors[mode]}>{mode}</Tag>;
+      onFilter: (value, record) => record.mode === value,
+    },
+    {
+      title: "Facture",
+      dataIndex: "code_facture",
+      key: "code_facture",
+      width: 150,
+      render: (codeFacture) => {
+        const facture = getFactureInfo(codeFacture);
+        return (
+          <Space direction="vertical" size="small">
+            <strong>{codeFacture || "N/A"}</strong>
+            {facture && (
+              <span style={{ fontSize: 12, color: "#666" }}>
+                {facture.clientNom} {facture.clientPrenom}
+              </span>
+            )}
+          </Space>
+        );
       },
     },
     {
-      title: "Statut",
-      dataIndex: "statut",
-      key: "statut",
-      width: 120,
-      filters: [
-        { text: "Validé", value: "validé" },
-        { text: "En attente", value: "en attente" },
-        { text: "Annulé", value: "annulé" },
-      ],
-      onFilter: (value, record) => record.statut === value,
-      render: (statut) => (
-        <Tag color={getStatutColor(statut)}>{statut.toUpperCase()}</Tag>
-      ),
+      title: "Remarques",
+      dataIndex: "remarques",
+      key: "remarques",
+      ellipsis: true,
     },
     {
-      title: "Agent",
-      dataIndex: "agentNom",
-      key: "agentNom",
+      title: "Date Création",
+      dataIndex: "date_creation",
+      key: "date_creation",
       width: 120,
+      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : "-"),
     },
     {
       title: "Actions",
       key: "actions",
-      width: 220,
       fixed: "right",
+      width: 150,
       render: (_, record) => (
         <Space size="small">
           <Button
+            icon={<EditOutlined />}
+            onClick={() => openEditModal(record)}
             type="link"
-            icon={<EyeOutlined />}
-            onClick={() => handleVoirDetails(record)}
             size="small"
           >
-            Détails
+            Modifier
           </Button>
-          <Button
-            type="link"
-            icon={<FilePdfOutlined />}
-            onClick={() => handleImprimerRecu(record)}
-            size="small"
+          <Popconfirm
+            title="Supprimer ce paiement ?"
+            description="Cette action mettra à jour le solde de la facture."
+            onConfirm={() => handleDelete(record.id)}
+            okText="Oui"
+            cancelText="Non"
           >
-            Reçu
-          </Button>
-          {record.statut === "validé" && (
-            <Popconfirm
-              title="Êtes-vous sûr de vouloir annuler ce paiement ?"
-              onConfirm={() => handleAnnulerPaiement(record)}
-              okText="Oui"
-              cancelText="Non"
-            >
-              <Button type="link" danger icon={<StopOutlined />} size="small">
-                Annuler
-              </Button>
-            </Popconfirm>
-          )}
+            <Button type="link" danger icon={<DeleteOutlined />} size="small">
+              Supprimer
+            </Button>
+          </Popconfirm>
         </Space>
       ),
     },
   ];
 
-  // Factures avec montant restant > 0
-  const facturesImpayees = factures.filter((f) => f.montantRestant > 0);
-
   return (
     <div style={{ width: "100%", height: "100%" }}>
-      <Card title="Journal des Paiements" bordered={false} style={{ width: "100%" }}>
-        <Space direction="vertical" style={{ width: "100%" }} size="large">
-          {/* Statistiques */}
-          <Row gutter={16}>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="Total des paiements"
-                  value={statistiques.totalPaiements}
-                  suffix="DA"
-                  valueStyle={{ color: "#3f8600" }}
-                  prefix={<DollarOutlined />}
-                />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="Nombre de paiements"
-                  value={statistiques.nombrePaiements}
-                  valueStyle={{ color: "#1890ff" }}
-                />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="Paiements validés"
-                  value={statistiques.parStatut.validé.nombre}
-                  suffix={`/ ${statistiques.nombrePaiements}`}
-                  valueStyle={{ color: "#52c41a" }}
-                />
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card>
-                <Statistic
-                  title="En attente"
-                  value={statistiques.parStatut["en attente"].montant}
-                  suffix="DA"
-                  valueStyle={{ color: "#faad14" }}
-                />
-              </Card>
-            </Col>
-          </Row>
+      {/* Statistiques */}
+      {stats && (
+        <Row gutter={16} style={{ marginBottom: 24 }}>
+          <Col span={8}>
+            <Card>
+              <Statistic
+                title="Total Paiements"
+                value={stats.total_paiements || 0}
+                prefix={<DollarOutlined />}
+              />
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card>
+              <Statistic
+                title="Montant Total"
+                value={stats.montant_total || 0}
+                suffix="DA"
+                precision={0}
+                valueStyle={{ color: "#52c41a" }}
+              />
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card>
+              <Statistic
+                title="Paiements ce mois"
+                value={
+                  paiements.filter(
+                    (p) =>
+                      p.date &&
+                      dayjs(p.date).month() === dayjs().month() &&
+                      dayjs(p.date).year() === dayjs().year()
+                  ).length
+                }
+                prefix={<DollarOutlined />}
+              />
+            </Card>
+          </Col>
+        </Row>
+      )}
 
-          {/* Barre de recherche et actions */}
-          <Space style={{ justifyContent: "space-between", width: "100%" }}>
+      <Card title="Gestion des Paiements" bordered={false}>
+        <Space direction="vertical" style={{ width: "100%" }} size="large">
+          <Space style={{ width: "100%", justifyContent: "space-between" }}>
             <Input
-              placeholder="Rechercher par référence, facture, client ou mode"
+              placeholder="Rechercher par référence, facture ou remarques"
               prefix={<SearchOutlined />}
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              style={{ width: 500 }}
+              style={{ width: 400 }}
               allowClear
             />
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={handleAjouterPaiement}
-            >
-              Enregistrer un paiement
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
+              Ajouter Paiement
             </Button>
           </Space>
 
-          {/* Tableau des paiements */}
           <Table
             columns={columns}
             dataSource={filteredPaiements}
             rowKey="id"
+            loading={loading}
             pagination={{
               pageSize: 10,
               showSizeChanger: true,
               showTotal: (total) => `Total: ${total} paiements`,
             }}
-            scroll={{ x: 1600 }}
+            scroll={{ x: 1400 }}
             bordered
             locale={{
               emptyText: (
@@ -331,28 +334,28 @@ const Paiements = () => {
                   description={
                     searchText
                       ? `Aucun paiement trouvé pour "${searchText}"`
-                      : "Aucun paiement enregistré"
+                      : "Aucun paiement disponible"
                   }
                 />
               ),
             }}
             summary={(pageData) => {
               let totalMontant = 0;
-              pageData.forEach(({ montant, statut }) => {
-                if (statut === "validé") totalMontant += montant;
+              pageData.forEach(({ montant }) => {
+                totalMontant += montant || 0;
               });
 
               return (
                 <Table.Summary.Row style={{ backgroundColor: "#fafafa" }}>
-                  <Table.Summary.Cell index={0} colSpan={4}>
-                    <strong>Total des paiements affichés (validés)</strong>
+                  <Table.Summary.Cell index={0} colSpan={2}>
+                    <strong>Total</strong>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={4}>
-                    <strong style={{ color: "#52c41a", fontSize: 14 }}>
+                  <Table.Summary.Cell index={2}>
+                    <strong style={{ color: "#52c41a" }}>
                       {totalMontant.toLocaleString()} DA
                     </strong>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={5} colSpan={4} />
+                  <Table.Summary.Cell index={3} colSpan={5} />
                 </Table.Summary.Row>
               );
             }}
@@ -360,117 +363,66 @@ const Paiements = () => {
         </Space>
       </Card>
 
-      {/* Modal Détails Paiement */}
+      {/* Modal Création/Modification Paiement */}
       <Modal
-        title={`Détails du paiement ${selectedPaiement?.reference}`}
-        open={detailsVisible}
-        onCancel={() => setDetailsVisible(false)}
-        footer={[
-          <Button key="close" onClick={() => setDetailsVisible(false)}>
-            Fermer
-          </Button>,
-          <Button
-            key="print"
-            type="primary"
-            icon={<FilePdfOutlined />}
-            onClick={() => handleImprimerRecu(selectedPaiement)}
-          >
-            Imprimer le reçu
-          </Button>,
-        ]}
-        width={700}
-      >
-        {selectedPaiement && (
-          <Descriptions bordered column={2} size="small">
-            <Descriptions.Item label="Référence" span={1}>
-              {selectedPaiement.reference}
-            </Descriptions.Item>
-            <Descriptions.Item label="Statut" span={1}>
-              <Tag color={getStatutColor(selectedPaiement.statut)}>
-                {selectedPaiement.statut.toUpperCase()}
-              </Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="Date de paiement" span={2}>
-              {selectedPaiement.datePaiement}
-            </Descriptions.Item>
-            <Descriptions.Item label="Facture" span={1}>
-              {selectedPaiement.numeroFacture}
-            </Descriptions.Item>
-            <Descriptions.Item label="Client" span={1}>
-              {selectedPaiement.clientNom}
-            </Descriptions.Item>
-            <Descriptions.Item label="Montant" span={2}>
-              <strong style={{ fontSize: 18, color: "#52c41a" }}>
-                {selectedPaiement.montant.toLocaleString()} DA
-              </strong>
-            </Descriptions.Item>
-            <Descriptions.Item label="Mode de paiement" span={2}>
-              <Tag
-                color={
-                  {
-                    Espèces: "gold",
-                    Chèque: "blue",
-                    Virement: "cyan",
-                    "Carte bancaire": "purple",
-                  }[selectedPaiement.modePaiement]
-                }
-              >
-                {selectedPaiement.modePaiement}
-              </Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="Agent" span={2}>
-              {selectedPaiement.agentNom}
-            </Descriptions.Item>
-            {selectedPaiement.commentaire && (
-              <Descriptions.Item label="Commentaire" span={2}>
-                {selectedPaiement.commentaire}
-              </Descriptions.Item>
-            )}
-          </Descriptions>
-        )}
-      </Modal>
-
-      {/* Modal Ajouter Paiement */}
-      <Modal
-        title="Enregistrer un nouveau paiement"
-        open={ajouterVisible}
+        title={editingPaiement ? "Modifier Paiement" : "Créer Paiement"}
+        open={modalVisible}
         onCancel={() => {
-          setAjouterVisible(false);
+          setModalVisible(false);
           form.resetFields();
         }}
         onOk={() => form.submit()}
-        okText="Enregistrer"
+        okText={editingPaiement ? "Modifier" : "Créer"}
         cancelText="Annuler"
-        width={700}
+        width={600}
       >
-        <Form form={form} layout="vertical" onFinish={handleAjouterSubmit}>
+        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+          {/* La référence est auto-générée par la DB, on ne l'affiche pas en création */}
+          {editingPaiement && (
+            <Form.Item label="Référence">
+              <Input disabled value={editingPaiement.reference} />
+            </Form.Item>
+          )}
+
           <Form.Item
-            name="factureId"
+            name="code_facture"
             label="Facture"
-            rules={[{ required: true, message: "Veuillez sélectionner une facture" }]}
+            rules={[{ required: true, message: "Veuillez sélectionner la facture" }]}
           >
             <Select
-              placeholder="Sélectionner une facture impayée"
               showSearch
+              placeholder="Sélectionner une facture"
               optionFilterProp="children"
-              onChange={(value) => {
-                const facture = factures.find((f) => f.id === value);
-                form.setFieldsValue({ montant: facture.montantRestant });
-              }}
-            >
-              {facturesImpayees.map((facture) => (
-                <Select.Option key={facture.id} value={facture.id}>
-                  {facture.numeroFacture} - {facture.clientNom} (Reste:{" "}
-                  {facture.montantRestant.toLocaleString()} DA)
-                </Select.Option>
-              ))}
-            </Select>
+              filterOption={(input, option) =>
+                String(option.label).toLowerCase().includes(String(input).toLowerCase())
+              }
+              allowClear
+              options={factures
+                .filter((f) => !f.est_payee || f.montantRestant > 0)
+                .map((f) => ({
+                  key: f.code_facture,
+                  value: f.code_facture, // ← CORRECTION: Utiliser code_facture, pas id
+                  label: `${f.code_facture} - ${f.clientNom} ${f.clientPrenom} (Reste: ${f.montantRestant?.toLocaleString()} DA)`,
+                }))}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="date"
+            label="Date"
+            rules={[{ required: true, message: "Veuillez sélectionner la date" }]}
+            initialValue={dayjs()}
+          >
+            <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD" />
           </Form.Item>
 
           <Form.Item
             name="montant"
-            label="Montant du paiement"
-            rules={[{ required: true, message: "Veuillez saisir le montant" }]}
+            label="Montant"
+            rules={[
+              { required: true, message: "Veuillez saisir le montant" },
+              { type: "number", min: 0.01, message: "Le montant doit être positif" },
+            ]}
           >
             <InputNumber
               style={{ width: "100%" }}
@@ -481,56 +433,21 @@ const Paiements = () => {
           </Form.Item>
 
           <Form.Item
-            name="modePaiement"
+            name="mode"
             label="Mode de paiement"
-            rules={[{ required: true, message: "Veuillez sélectionner un mode" }]}
+            rules={[{ required: true, message: "Veuillez sélectionner le mode" }]}
           >
             <Select placeholder="Sélectionner un mode">
-              <Select.Option value="Espèces">Espèces</Select.Option>
-              <Select.Option value="Chèque">Chèque</Select.Option>
-              <Select.Option value="Virement">Virement</Select.Option>
-              <Select.Option value="Carte bancaire">Carte bancaire</Select.Option>
+              <Select.Option value="ESPECES">Espèces</Select.Option>
+              <Select.Option value="CHEQUE">Chèque</Select.Option>
+              <Select.Option value="VIREMENT">Virement bancaire</Select.Option>
+              <Select.Option value="CARTE">Carte bancaire</Select.Option>
+              <Select.Option value="MOBILE">Paiement mobile</Select.Option>
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="datePaiement"
-            label="Date de paiement"
-            rules={[{ required: true, message: "Veuillez sélectionner une date" }]}
-            initialValue={dayjs()}
-          >
-            <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD" />
-          </Form.Item>
-
-          <Form.Item name="commentaire" label="Commentaire">
-            <TextArea rows={3} placeholder="Notes ou observations..." />
-          </Form.Item>
-        </Form>
-      </Modal>
-
-      {/* Modal Annuler Paiement */}
-      <Modal
-        title={`Annuler le paiement ${selectedPaiement?.reference}`}
-        open={annulerVisible}
-        onCancel={() => {
-          setAnnulerVisible(false);
-          annulerForm.resetFields();
-        }}
-        onOk={() => annulerForm.submit()}
-        okText="Confirmer l'annulation"
-        cancelText="Retour"
-        okButtonProps={{ danger: true }}
-      >
-        <Form form={annulerForm} layout="vertical" onFinish={handleAnnulerSubmit}>
-          <Form.Item
-            name="motif"
-            label="Motif de l'annulation"
-            rules={[{ required: true, message: "Veuillez saisir le motif" }]}
-          >
-            <TextArea
-              rows={4}
-              placeholder="Ex: Erreur de saisie, chèque impayé, demande du client..."
-            />
+          <Form.Item name="remarques" label="Remarques">
+            <Input.TextArea rows={3} placeholder="Remarques optionnelles..." />
           </Form.Item>
         </Form>
       </Modal>

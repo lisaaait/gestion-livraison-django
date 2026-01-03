@@ -1,4 +1,5 @@
-import { Menu, Layout } from "antd";
+import { Menu, Layout, Avatar, Space } from "antd";
+import { Dropdown } from "antd";
 import {
   TruckOutlined,
   DashboardOutlined,
@@ -9,14 +10,29 @@ import {
   CarOutlined,
   EnvironmentOutlined,
   CalculatorOutlined,
+  LogoutOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation,useNavigate } from "react-router-dom";
 
 const { Sider } = Layout;
 
 const Sidebar = () => {
   const location = useLocation();
-
+const navigate = useNavigate();
+ const showLogoutConfirm = () => {
+    Modal.confirm({
+      title: "Déconnexion",
+      content: "Voulez-vous vraiment vous déconnecter ?",
+      cancelText: "Annuler",
+      okText: "Oui",
+      okType: "danger",
+      onOk() {
+        navigate("/");
+      },
+      centered: true,
+    });
+  };
   const menuItems = [
     {
       key: "/admin",
@@ -50,7 +66,13 @@ const Sidebar = () => {
       key: "/admin/reclamations",
       icon: <WarningOutlined />,
       label: <Link to="/admin/reclamations">Réclamations</Link>,
-      disabled: true,
+      
+    },
+    {
+      key: "/admin/incidents",
+      icon: <WarningOutlined />,
+      label: <Link to="/admin/incidents">Incidents</Link>,
+      
     },
     {
       key: "/admin/tournees",
@@ -71,6 +93,17 @@ const Sidebar = () => {
       disabled: true,
     },
   ];
+const logOutBtn = [ 
+    {
+       key: "/",
+      icon: <LogoutOutlined/>,
+       label: (
+      <span onClick={showLogoutConfirm}>
+        Se déconnecter
+      </span>
+    ),
+    },
+  ];
 
   return (
     <Sider
@@ -82,6 +115,8 @@ const Sidebar = () => {
         left: 0,
         top: 0,
         bottom: 0,
+         display: "flex",
+        flexDirection: "column",
       }}
     >
       <div
@@ -102,9 +137,15 @@ const Sidebar = () => {
         theme="dark"
         mode="inline"
         selectedKeys={[location.pathname]}
-        style={{ marginTop: 16 }}
+        style={{ marginTop: 16, flex: 1 }}
         items={menuItems}
       />
+           < Menu 
+      theme="dark"
+        mode="inline"
+        selectedKeys={[location.pathname]}
+        style={{ marginTop:"auto"}}
+        items={logOutBtn}/>
     </Sider>
   );
 };

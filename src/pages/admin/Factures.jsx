@@ -14,6 +14,7 @@ import {
   Descriptions,
   message,
   Popconfirm,
+  Switch,
 } from "antd";
 import {
   SearchOutlined,
@@ -21,28 +22,41 @@ import {
   DollarOutlined,
   DeleteOutlined,
   FilePdfOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import { useContext, useEffect, useState } from "react";
 import { FactureContext } from "../../context/FactureContext";
 import dayjs from "dayjs";
 
 const Factures = () => {
-  const { factures, fetchFactures, ajouterPaiement, supprimerFacture } =
-    useContext(FactureContext);
+  const {
+    factures,
+    clients,
+    fetchFactures,
+    fetchClients,
+    ajouterPaiement,
+    supprimerFacture,
+    creerFacture,
+  } = useContext(FactureContext);
+
   const [searchText, setSearchText] = useState("");
   const [detailsVisible, setDetailsVisible] = useState(false);
   const [paiementVisible, setPaiementVisible] = useState(false);
+  const [createVisible, setCreateVisible] = useState(false);
   const [selectedFacture, setSelectedFacture] = useState(null);
   const [form] = Form.useForm();
+  const [createForm] = Form.useForm();
 
   useEffect(() => {
     fetchFactures();
-  }, [fetchFactures]);
+    // charger la liste des clients pour le formulaire de création
+    if (fetchClients) fetchClients();
+  }, [fetchFactures, fetchClients]);
 
   const filteredFactures = factures.filter(
     (facture) =>
-      facture.numeroFacture.toLowerCase().includes(searchText.toLowerCase()) ||
-      facture.clientNom.toLowerCase().includes(searchText.toLowerCase())
+      facture.code_facture?.toLowerCase().includes(searchText.toLowerCase()) ||
+      facture.clientNom?.toLowerCase().includes(searchText.toLowerCase())
   );
 
   const handleVoirDetails = (facture) => {
@@ -62,83 +76,141 @@ const Factures = () => {
       montant: values.montant,
       modePaiement: values.modePaiement,
       reference: values.reference,
+      remarques: values.remarques || ""
     };
 
-    await ajouterPaiement(selectedFacture.id, paiement);
-    message.success("Paiement enregistré avec succès");
-    setPaiementVisible(false);
-    form.resetFields();
-  };
-
-  const handleSupprimerFacture = async (factureId) => {
-    await supprimerFacture(factureId);
-    message.success("Facture supprimée avec succès");
-  };
-
-  const handleImprimerFacture = (facture) => {
-    message.info(`Impression de la facture ${facture.numeroFacture}`);
-    // Logique d'impression/PDF à implémenter
-  };
-
-  const getStatutColor = (statut) => {
-    switch (statut) {
-      case "payée":
-        return "green";
-      case "partiellement payée":
-        return "orange";
-      case "impayée":
-        return "red";
-      default:
-        return "default";
+    try {
+      await ajouterPaiement(selectedFacture.code_facture, paiement);
+      message.success("Paiement enregistré avec succès");
+      setPaiementVisible(false);
+      form.resetFields();
+    } catch (err) {
+      console.error(err);
+      message.error("Erreur lors de l'enregistrement du paiement");
     }
   };
 
+  const handleSupprimerFacture = async (factureId) => {
+    try {
+      await supprimerFacture(factureId);
+      message.success("Facture supprimée avec succès");
+    } catch (err) {
+      console.error(err);
+      message.error("Erreur lors de la suppression");
+    }
+  };
+
+  const handleImprimerFacture = (facture) => {
+    message.info(`Impression de la facture ${facture.code_facture}`);
+    // Logique d'impression/PDF à implémenter
+  };
+
+  const getStatutTag = (facture) => {
+    if (facture.est_payee) {
+      return <Tag color="green">PAYÉE</Tag>;
+    } else if (facture.montantPaye > 0) {
+      return <Tag color="orange">PARTIELLEMENT PAYÉE</Tag>;
+    } else {
+      return <Tag color="red">IMPAYÉE</Tag>;
+    }
+  };
+
+  const handleOpenCreate = () => {
+    setCreateVisible(true);
+    createForm.resetFields();
+  };
+
+const handleCreateSubmit = async (values) => {
+  // construire l'objet attendu par le contexte
+  const factureData = {
+    // Ne pas envoyer code_facture, laissez le backend le générer
+    code_client_id: values.code_client, // ID du client sélectionné
+    date_f: values.date_f ? values.date_f.format("YYYY-MM-DD") : null,
+    ht: values.ht || 0,
+    tva: values.tva || 0,
+    ttc: values.ttc ?? ((values.ht || 0) + (values.tva || 0)),
+    // Ne pas envoyer date_creation
+    remarques: values.remarques || "",
+    est_payee: values.est_payee || false,
+  };
+
+  try {
+    await creerFacture(factureData);
+    message.success("Facture créée avec succès");
+    setCreateVisible(false);
+    createForm.resetFields();
+  } catch (err) {
+    console.error("Erreur détaillée:", err);
+    // Afficher plus de détails sur l'erreur
+    const errorMsg = err.response?.data?.detail || 
+                     err.response?.data?.error || 
+                     "Erreur lors de la création de la facture";
+    message.error(errorMsg);
+    
+    // Pour le debug, afficher l'erreur complète dans la console
+    if (err.response?.data?.traceback) {
+      console.error("Traceback serveur:", err.response.data.traceback);
+    }
+  }
+};
+
   const columns = [
     {
-      title: "N° Facture",
-      dataIndex: "numeroFacture",
-      key: "numeroFacture",
+      title: "Code Facture",
+      dataIndex: "code_facture",
+      key: "code_facture",
       width: 150,
-      sorter: (a, b) => a.numeroFacture.localeCompare(b.numeroFacture),
+      sorter: (a, b) => (a.code_facture || "").localeCompare(b.code_facture || ""),
     },
     {
       title: "Client",
-      dataIndex: "clientNom",
-      key: "clientNom",
-      width: 150,
+      key: "client",
+      width: 200,
+      render: (_, record) => {
+        const nom = record.clientNom || "";
+        const prenom = record.clientPrenom || "";
+        return prenom ? `${nom} ${prenom}` : nom;
+      },
     },
     {
-      title: "Date",
-      dataIndex: "dateFacture",
-      key: "dateFacture",
+      title: "Date Facture",
+      dataIndex: "date_f",
+      key: "date_f",
       width: 120,
-      sorter: (a, b) => new Date(a.dateFacture) - new Date(b.dateFacture),
+      sorter: (a, b) => new Date(a.date_f) - new Date(b.date_f),
+    },
+    {
+      title: "Date Création",
+      dataIndex: "date_creation",
+      key: "date_creation",
+      width: 120,
+      sorter: (a, b) => new Date(a.date_creation) - new Date(b.date_creation),
     },
     {
       title: "Montant HT",
-      dataIndex: "montantHT",
-      key: "montantHT",
+      dataIndex: "ht",
+      key: "ht",
       width: 120,
-      render: (montant) => `${montant.toLocaleString()} DA`,
+      render: (montant) => `${(montant || 0).toLocaleString()} DA`,
     },
     {
-      title: "TVA (19%)",
-      dataIndex: "montantTVA",
-      key: "montantTVA",
+      title: "TVA",
+      dataIndex: "tva",
+      key: "tva",
       width: 120,
-      render: (montant) => `${montant.toLocaleString()} DA`,
+      render: (montant) => `${(montant || 0).toLocaleString()} DA`,
     },
     {
       title: "Montant TTC",
-      dataIndex: "montantTTC",
-      key: "montantTTC",
+      dataIndex: "ttc",
+      key: "ttc",
       width: 130,
       render: (montant) => (
         <strong style={{ color: "#1890ff" }}>
-          {montant.toLocaleString()} DA
+          {(montant || 0).toLocaleString()} DA
         </strong>
       ),
-      sorter: (a, b) => a.montantTTC - b.montantTTC,
+      sorter: (a, b) => (a.ttc || 0) - (b.ttc || 0),
     },
     {
       title: "Payé",
@@ -147,7 +219,7 @@ const Factures = () => {
       width: 120,
       render: (montant) => (
         <span style={{ color: "#52c41a" }}>
-          {montant.toLocaleString()} DA
+          {(montant || 0).toLocaleString()} DA
         </span>
       ),
     },
@@ -158,7 +230,7 @@ const Factures = () => {
       width: 120,
       render: (montant) => (
         <span style={{ color: montant > 0 ? "#ff4d4f" : "#52c41a" }}>
-          {montant.toLocaleString()} DA
+          {(montant || 0).toLocaleString()} DA
         </span>
       ),
     },
@@ -167,15 +239,18 @@ const Factures = () => {
       dataIndex: "statut",
       key: "statut",
       width: 150,
-      render: (statut) => (
-        <Tag color={getStatutColor(statut)}>{statut.toUpperCase()}</Tag>
-      ),
+      render: (_, record) => getStatutTag(record),
       filters: [
-        { text: "Payée", value: "payée" },
-        { text: "Partiellement payée", value: "partiellement payée" },
-        { text: "Impayée", value: "impayée" },
+        { text: "Payée", value: "payee" },
+        { text: "Partiellement payée", value: "partielle" },
+        { text: "Impayée", value: "impayee" },
       ],
-      onFilter: (value, record) => record.statut === value,
+      onFilter: (value, record) => {
+        if (value === "payee") return record.est_payee;
+        if (value === "partielle") return !record.est_payee && record.montantPaye > 0;
+        if (value === "impayee") return !record.est_payee && record.montantPaye === 0;
+        return false;
+      },
     },
     {
       title: "Actions",
@@ -216,12 +291,7 @@ const Factures = () => {
             okText="Oui"
             cancelText="Non"
           >
-            <Button
-              type="link"
-              danger
-              icon={<DeleteOutlined />}
-              size="small"
-            >
+            <Button type="link" danger icon={<DeleteOutlined />} size="small">
               Supprimer
             </Button>
           </Popconfirm>
@@ -234,25 +304,30 @@ const Factures = () => {
     <div style={{ width: "100%", height: "100%" }}>
       <Card title="Gestion des Factures" bordered={false} style={{ width: "100%" }}>
         <Space direction="vertical" style={{ width: "100%" }} size="large">
-          <Input
-            placeholder="Rechercher par numéro de facture ou client"
-            prefix={<SearchOutlined />}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            style={{ width: 400 }}
-            allowClear
-          />
+          <Space style={{ width: "100%", justifyContent: "space-between" }}>
+            <Input
+              placeholder="Rechercher par code facture ou client"
+              prefix={<SearchOutlined />}
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              style={{ width: 400 }}
+              allowClear
+            />
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenCreate}>
+              Ajouter une facture
+            </Button>
+          </Space>
 
           <Table
             columns={columns}
             dataSource={filteredFactures}
-            rowKey="id"
+            rowKey="code_facture"
             pagination={{
               pageSize: 10,
               showSizeChanger: true,
               showTotal: (total) => `Total: ${total} factures`,
             }}
-            scroll={{ x: 1500 }}
+            scroll={{ x: 1600 }}
             bordered
             locale={{
               emptyText: (
@@ -273,41 +348,41 @@ const Factures = () => {
               let totalPaye = 0;
               let totalRestant = 0;
 
-              pageData.forEach(({ montantHT, montantTVA, montantTTC, montantPaye, montantRestant }) => {
-                totalHT += montantHT;
-                totalTVA += montantTVA;
-                totalTTC += montantTTC;
-                totalPaye += montantPaye;
-                totalRestant += montantRestant;
+              pageData.forEach(({ ht, tva, ttc, montantPaye, montantRestant }) => {
+                totalHT += ht || 0;
+                totalTVA += tva || 0;
+                totalTTC += ttc || 0;
+                totalPaye += montantPaye || 0;
+                totalRestant += montantRestant || 0;
               });
 
               return (
                 <Table.Summary.Row style={{ backgroundColor: "#fafafa" }}>
-                  <Table.Summary.Cell index={0} colSpan={3}>
+                  <Table.Summary.Cell index={0} colSpan={4}>
                     <strong>Total</strong>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={3}>
+                  <Table.Summary.Cell index={4}>
                     <strong>{totalHT.toLocaleString()} DA</strong>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={4}>
+                  <Table.Summary.Cell index={5}>
                     <strong>{totalTVA.toLocaleString()} DA</strong>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={5}>
+                  <Table.Summary.Cell index={6}>
                     <strong style={{ color: "#1890ff" }}>
                       {totalTTC.toLocaleString()} DA
                     </strong>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={6}>
+                  <Table.Summary.Cell index={7}>
                     <strong style={{ color: "#52c41a" }}>
                       {totalPaye.toLocaleString()} DA
                     </strong>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={7}>
+                  <Table.Summary.Cell index={8}>
                     <strong style={{ color: "#ff4d4f" }}>
                       {totalRestant.toLocaleString()} DA
                     </strong>
                   </Table.Summary.Cell>
-                  <Table.Summary.Cell index={8} colSpan={2} />
+                  <Table.Summary.Cell index={9} colSpan={2} />
                 </Table.Summary.Row>
               );
             }}
@@ -317,7 +392,7 @@ const Factures = () => {
 
       {/* Modal Détails Facture */}
       <Modal
-        title={`Détails de la facture ${selectedFacture?.numeroFacture}`}
+        title={`Détails de la facture ${selectedFacture?.code_facture}`}
         open={detailsVisible}
         onCancel={() => setDetailsVisible(false)}
         footer={[
@@ -338,58 +413,41 @@ const Factures = () => {
         {selectedFacture && (
           <>
             <Descriptions bordered column={2} size="small">
-              <Descriptions.Item label="N° Facture" span={1}>
-                {selectedFacture.numeroFacture}
+              <Descriptions.Item label="Code Facture" span={1}>
+                {selectedFacture.code_facture}
               </Descriptions.Item>
               <Descriptions.Item label="Client" span={1}>
-                {selectedFacture.clientNom}
+                {selectedFacture.clientNom} {selectedFacture.clientPrenom}
               </Descriptions.Item>
-              <Descriptions.Item label="Date" span={1}>
-                {selectedFacture.dateFacture}
+              <Descriptions.Item label="Date Facture" span={1}>
+                {selectedFacture.date_f}
               </Descriptions.Item>
-              <Descriptions.Item label="Échéance" span={1}>
-                {selectedFacture.dateEcheance}
+              <Descriptions.Item label="Date Création" span={1}>
+                {selectedFacture.date_creation}
+              </Descriptions.Item>
+              <Descriptions.Item label="Code Client" span={2}>
+                {selectedFacture.code_client_id}
               </Descriptions.Item>
               <Descriptions.Item label="Montant HT" span={1}>
-                {selectedFacture.montantHT.toLocaleString()} DA
+                {(selectedFacture.ht || 0).toLocaleString()} DA
               </Descriptions.Item>
-              <Descriptions.Item label="TVA (19%)" span={1}>
-                {selectedFacture.montantTVA.toLocaleString()} DA
+              <Descriptions.Item label="TVA" span={1}>
+                {(selectedFacture.tva || 0).toLocaleString()} DA
               </Descriptions.Item>
               <Descriptions.Item label="Montant TTC" span={2}>
                 <strong style={{ fontSize: 16, color: "#1890ff" }}>
-                  {selectedFacture.montantTTC.toLocaleString()} DA
+                  {(selectedFacture.ttc || 0).toLocaleString()} DA
                 </strong>
               </Descriptions.Item>
+              <Descriptions.Item label="Remarques" span={2}>
+                {selectedFacture.remarques || "Aucune remarque"}
+              </Descriptions.Item>
               <Descriptions.Item label="Statut" span={2}>
-                <Tag color={getStatutColor(selectedFacture.statut)}>
-                  {selectedFacture.statut.toUpperCase()}
-                </Tag>
+                {getStatutTag(selectedFacture)}
               </Descriptions.Item>
             </Descriptions>
 
-            <Card
-              title="Expéditions facturées"
-              size="small"
-              style={{ marginTop: 16 }}
-            >
-              <Table
-                dataSource={selectedFacture.expeditions}
-                columns={[
-                  { title: "Code", dataIndex: "code", key: "code" },
-                  {
-                    title: "Montant",
-                    dataIndex: "montant",
-                    key: "montant",
-                    render: (montant) => `${montant.toLocaleString()} DA`,
-                  },
-                ]}
-                pagination={false}
-                size="small"
-              />
-            </Card>
-
-            {selectedFacture.paiements.length > 0 && (
+            {selectedFacture.paiements && selectedFacture.paiements.length > 0 && (
               <Card
                 title="Historique des paiements"
                 size="small"
@@ -398,18 +456,19 @@ const Factures = () => {
                 <Table
                   dataSource={selectedFacture.paiements}
                   columns={[
-                    { title: "Date", dataIndex: "datePaiement", key: "datePaiement" },
+                    { title: "Date", dataIndex: "date_paiement", key: "date_paiement" },
                     {
                       title: "Montant",
                       dataIndex: "montant",
                       key: "montant",
-                      render: (montant) => `${montant.toLocaleString()} DA`,
+                      render: (montant) => `${(montant || 0).toLocaleString()} DA`,
                     },
-                    { title: "Mode", dataIndex: "modePaiement", key: "modePaiement" },
+                    { title: "Mode", dataIndex: "mode_paiement", key: "mode_paiement" },
                     { title: "Référence", dataIndex: "reference", key: "reference" },
                   ]}
                   pagination={false}
                   size="small"
+                  rowKey="id"
                 />
               </Card>
             )}
@@ -419,7 +478,7 @@ const Factures = () => {
 
       {/* Modal Ajouter Paiement */}
       <Modal
-        title={`Enregistrer un paiement - ${selectedFacture?.numeroFacture}`}
+        title={`Enregistrer un paiement - ${selectedFacture?.code_facture}`}
         open={paiementVisible}
         onCancel={() => {
           setPaiementVisible(false);
@@ -433,14 +492,14 @@ const Factures = () => {
           <>
             <Descriptions bordered column={1} size="small" style={{ marginBottom: 16 }}>
               <Descriptions.Item label="Montant TTC">
-                {selectedFacture.montantTTC.toLocaleString()} DA
+                {(selectedFacture.ttc || 0).toLocaleString()} DA
               </Descriptions.Item>
               <Descriptions.Item label="Déjà payé">
-                {selectedFacture.montantPaye.toLocaleString()} DA
+                {(selectedFacture.montantPaye || 0).toLocaleString()} DA
               </Descriptions.Item>
               <Descriptions.Item label="Restant à payer">
                 <strong style={{ color: "#ff4d4f" }}>
-                  {selectedFacture.montantRestant.toLocaleString()} DA
+                  {(selectedFacture.montantRestant || 0).toLocaleString()} DA
                 </strong>
               </Descriptions.Item>
             </Descriptions>
@@ -499,6 +558,67 @@ const Factures = () => {
             </Form>
           </>
         )}
+      </Modal>
+
+      {/* Modal Création Facture */}
+      <Modal
+        title="Créer une nouvelle facture"
+        open={createVisible}
+        onCancel={() => {
+          setCreateVisible(false);
+          createForm.resetFields();
+        }}
+        onOk={() => createForm.submit()}
+        okText="Créer"
+        cancelText="Annuler"
+      >
+        <Form form={createForm} layout="vertical" onFinish={handleCreateSubmit}>
+          <Form.Item
+  name="code_client"
+  label="Client"
+  rules={[{ required: true, message: "Veuillez sélectionner un client" }]}
+>
+  <Select
+    showSearch
+    placeholder="Sélectionner un client"
+    optionFilterProp="children"
+    filterOption={(input, option) =>
+      String(option.children).toLowerCase().includes(String(input).toLowerCase())
+    }
+    allowClear
+  >
+    {(clients || []).map((c) => (
+      <Select.Option key={c.id} value={c.id}>
+        {`${c.nom || "—"}${c.prenom ? " " + c.prenom : ""}`}
+      </Select.Option>
+    ))}
+  </Select>
+</Form.Item>
+
+          <Form.Item name="date_f" label="Date facture" initialValue={dayjs()}>
+            <DatePicker style={{ width: "100%" }} format="YYYY-MM-DD" />
+          </Form.Item>
+
+          <Form.Item name="ht" label="Montant HT">
+            <InputNumber style={{ width: "100%" }} min={0} formatter={(v) => `${v}`} />
+          </Form.Item>
+
+          <Form.Item name="tva" label="TVA">
+            <InputNumber style={{ width: "100%" }} min={0} formatter={(v) => `${v}`} />
+          </Form.Item>
+
+          <Form.Item name="ttc" label="Montant TTC" help="Laisser vide pour calcul automatique (HT + TVA)">
+            <InputNumber style={{ width: "100%" }} min={0} formatter={(v) => `${v}`} />
+          </Form.Item>
+
+          <Form.Item name="remarques" label="Remarques">
+            <Input.TextArea rows={3} />
+          </Form.Item>
+
+          <Form.Item name="est_payee" label="Déjà payée" valuePropName="checked">
+            <Switch />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );
