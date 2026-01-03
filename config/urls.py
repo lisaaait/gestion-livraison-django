@@ -9,7 +9,7 @@ from facturation.views import FactureViewSet, PaiementViewSet, EtreFactureViewSe
 # Imports de TES vues (Logistique)
 from logistique.api_views import (
     ChauffeurViewSet, VehiculeViewSet, DestinationViewSet, 
-    TarificationViewSet, TourneeViewSet
+    TarificationViewSet, TourneeViewSet , StatistiquesLogistiqueView
 )
 
 # Création du router global unique
@@ -35,5 +35,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('home/', include('dashboard.urls')),
+    path('api/stats/logistique/', StatistiquesLogistiqueView.as_view(), name='api-stats-logistique'),
     path('api/', include(router.urls)), 
 ]

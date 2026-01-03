@@ -8,7 +8,11 @@ django.setup()
 
 from logistique.models import Destination, Tarification, Chauffeur, Vehicule, Expedition, Tournee
 from django.core.exceptions import ValidationError
-
+def seed():
+    print("Nettoyage de la base de données...")
+    Tournee.objects.all().delete()
+    Expedition.objects.all().delete()
+    
 def run_seed():
     print("--- Initialisation des données ---")
 

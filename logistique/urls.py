@@ -18,7 +18,7 @@ urlpatterns = [
     # --- AUTHENTIFICATION ---
     path('login/', api_views.ConnexionUtilisateur.as_view(), name='login'),
     path('logout/', api_views.LogoutView.as_view(next_page='login'), name='logout'),
-    path('api/', include(router.urls)),
-
+    path('stats/logistique/', api_views.StatistiquesLogistiqueView.as_view(), name='api-stats-logistique'),
+    path('', include(router.urls)),
     
 ]

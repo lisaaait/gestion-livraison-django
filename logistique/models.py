@@ -3,7 +3,9 @@ from django.core.validators import MinValueValidator, RegexValidator
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 from django.contrib.auth.models import AbstractUser
-from django.db import models
+from django.db.models import Sum
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 # --- VALIDATEURS ---
 valideur_permis = RegexValidator(regex=r'^[0-9]{10}$', message="Le permis doit contenir exactement 10 chiffres.")
@@ -34,15 +36,16 @@ class Expedition(models.Model):
     tarification = models.ForeignKey(Tarification, on_delete=models.SET_NULL, null=True)
     montant_estime = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     date_creation = models.DateTimeField(auto_now_add=True)
+    # Champ statut ajouté pour correspondre à la logique de tournée
+    statut = models.CharField(max_length=20, default='EN_ATTENTE') 
 
     def save(self, *args, **kwargs):
-        p_dec = Decimal(str(self.poids))
-        v_dec = Decimal(str(self.volume))
         if self.tarification:
-            # Correction : Utilisation du nom de champ correct 'montant_estime'
+            p_dec = Decimal(str(self.poids))
+            v_dec = Decimal(str(self.volume))
             self.montant_estime = (self.tarification.tarif_base_destination + 
                                (p_dec * self.tarification.tarif_poids) + 
-                                  (v_dec * self.tarification.tarif_volume))
+                               (v_dec * self.tarification.tarif_volume))
         super().save(*args, **kwargs)
 
 class Chauffeur(models.Model):
@@ -78,9 +81,15 @@ class Tournee(models.Model):
     date_tournee = models.DateField()
     vehicule = models.ForeignKey(Vehicule, on_delete=models.CASCADE)
     chauffeur = models.ForeignKey(Chauffeur, on_delete=models.CASCADE)
-    expeditions = models.ManyToManyField(Expedition, related_name='tournees', blank=True)
+    expeditions = models.ManyToManyField(Expedition, related_name='tournees', verbose_name="Colis")
+    statut = models.CharField(
+        max_length=20,
+        choices=[('EN_COURS', 'En cours'), ('TERMINEE', 'Terminée'), ('INCIDENT', 'Incident')],
+        default='EN_COURS'
+    )
 
     def clean(self):
+        # Vérification des permis
         permis = self.chauffeur.categorie_permis
         v_type = self.vehicule.type_vehicule
         if v_type == 'CAMION' and permis != 'C':
@@ -89,47 +98,70 @@ class Tournee(models.Model):
             raise ValidationError("Le chauffeur n'a pas le permis requis pour une voiture.")
         if v_type == 'MOTO' and permis != 'A':
             raise ValidationError("Incohérence : Une moto nécessite un permis A spécifique.")
+        
+        # Vérification disponibilité chauffeur
         if not self.pk and not self.chauffeur.statut_dispo:
             raise ValidationError(f"Le chauffeur {self.chauffeur.nom} est déjà en mission.")
+        # 3. LOGIQUE DE PROXIMITÉ (Par Zone Géo)
         if self.pk: 
-          expeditions = self.expeditions.all()
-          if expeditions.exists():
-            zones = set(e.tarification.destination.zone_geo for e in expeditions if e.tarification)
-            if len(zones) > 1:
-                raise ValidationError(
-                    f"ERREUR LOGISTIQUE : Une tournée ne peut pas couvrir plusieurs zones. "
-                    f"Zones détectées dans ce chargement : {zones}"
-                )
+            expeditions = self.expeditions.all()
+            if expeditions.exists():
+                # On récupère les ZONES GÉOGRAPHIQUES des destinations
+                # (ex: {'CENTRE', 'OUEST'})
+                zones = set(e.tarification.destination.zone_geo for e in expeditions if e.tarification)
+                
+                if len(zones) > 1:
+                    # Si on a plus d'une zone, c'est que c'est trop loin
+                    raise ValidationError(
+                        f"ERREUR GÉOGRAPHIQUE : Impossible de mélanger des villes de zones différentes. "
+                        f"Zones détectées : {list(zones)}. Une tournée doit rester dans la même zone (ex: CENTRE uniquement)."
+                    )
+
     def verifier_capacite(self):
-        """Vérification manuelle pour les tests de surcharge"""
-        total_poids = sum(e.poids for e in self.expeditions.all())
-        total_vol = sum(e.volume for e in self.expeditions.all())
-        if total_poids > Decimal(str(self.vehicule.capacite_poids)):
-            raise ValidationError(f"SURCHARGE POIDS : {total_poids}kg / {self.vehicule.capacite_poids}kg")
-        if total_vol > Decimal(str(self.vehicule.capacite_volume)):
-            raise ValidationError(f"SURCHARGE VOLUME : {total_vol}m3 / {self.vehicule.capacite_volume}m3")
+        stats = self.expeditions.aggregate(total_poids=Sum('poids'), total_vol=Sum('volume'))
+        poids_actuel = stats['total_poids'] or 0
+        vol_actuel = stats['total_vol'] or 0
+        if poids_actuel > Decimal(str(self.vehicule.capacite_poids)):
+            raise ValidationError(f"SURCHARGE POIDS : {poids_actuel}kg / {self.vehicule.capacite_poids}kg")
+        if vol_actuel > Decimal(str(self.vehicule.capacite_volume)):
+            raise ValidationError(f"SURCHARGE VOLUME : {vol_actuel}m3 / {self.vehicule.capacite_volume}m3")
 
     def save(self, *args, **kwargs):
         self.full_clean()
+        
+        # 1. Bloquer le chauffeur à la création
         if not self.pk:
             self.chauffeur.statut_dispo = False
             self.chauffeur.save()
+
+        # 2. Vérifier capacité si déjà existant
+        if self.pk:
+            self.verifier_capacite()
+            
+            # 3. Vérifier si tout est livré (Fermeture auto)
+            exps = self.expeditions.all()
+            if exps.exists() and not exps.exclude(statut='LIVREE').exists():
+                self.statut = 'TERMINEE'
+
+        # 4. Libérer le chauffeur si terminée
+        if self.statut == 'TERMINEE':
+            self.chauffeur.statut_dispo = True
+            self.chauffeur.save()
+
         super().save(*args, **kwargs)
 
 class Utilisateur(AbstractUser):
-    # L'e-mail est obligatoire et unique pour la connexion 
     email = models.EmailField(unique=True)
-    
-    # Définition des rôles pour l'autorisation par rôle 
-    ROLES = (
-        ('AGENT_LOGISTIQUE', 'Agent de Transport / Logistique'),
-        ('ADMIN', 'Administrateur'),
-    )
+    ROLES = (('AGENT_LOGISTIQUE', 'Agent'), ('ADMIN', 'Admin'))
     role = models.CharField(max_length=20, choices=ROLES, default='AGENT_LOGISTIQUE')
-
-    # Configuration pour utiliser l'email à la place du username
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username'] 
 
-    def __str__(self):
-        return self.email
+@receiver(post_save, sender=Expedition)
+def maj_statut_tournee_automatique(sender, instance, **kwargs):
+    # On cherche la tournée via le lien ManyToMany
+    tournees = instance.tournees.filter(statut='EN_COURS')
+    for tournee in tournees:
+        # Si tout est livré dans cette tournée, on la déclenche
+        if not tournee.expeditions.exclude(statut='LIVREE').exists():
+            tournee.save() # Le save() de Tournee s'occupe de la clôture et du chauffeur
