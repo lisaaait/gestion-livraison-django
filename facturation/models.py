@@ -139,10 +139,6 @@ class Facture(models.Model):
         self.save(update_fields=['est_payee'])
     
     def save(self, *args, **kwargs):
-        """
-        Calcule automatiquement HT, TVA et TTC.
-        """
-        self.calculer_montants()
         super().save(*args, **kwargs)
 
 
@@ -223,8 +219,9 @@ class Paiement(models.Model):
             reste = self.code_facture.reste_a_payer()
             
             if self.pk:
-                ancien_montant = Paiement.objects.get(pk=self.pk).montant_verse
-                reste += ancien_montant
+                ancien_paiement = Paiement.objects.get(pk=self.pk)
+                if ancien_paiement.code_facture_id == self.code_facture_id:
+                    reste += ancien_paiement.montant_verse
             
             if self.montant_verse > reste:
                 raise ValidationError(
@@ -235,9 +232,16 @@ class Paiement(models.Model):
         """
         Valide et met à jour le statut de paiement de la facture.
         """
+        ancienne_facture = None
+        if self.pk:
+            ancien_paiement = Paiement.objects.get(pk=self.pk)
+            if ancien_paiement.code_facture_id != self.code_facture_id:
+                ancienne_facture = ancien_paiement.code_facture
         self.full_clean()
         super().save(*args, **kwargs)
         self.code_facture.verifier_paiement_complet()
+        if ancienne_facture:
+            ancienne_facture.verifier_paiement_complet()
     
     def delete(self, *args, **kwargs):
         """
@@ -279,6 +283,9 @@ class EtreFacture(models.Model):
         verbose_name = "Expédition facturée"
         verbose_name_plural = "Expéditions facturées"
         unique_together = ['numexp', 'code_facture']
+        constraints = [
+            models.UniqueConstraint(fields=['numexp'], name='unique_expedition_facturee')
+        ]
         indexes = [
             models.Index(fields=['numexp']),
             models.Index(fields=['code_facture']),
@@ -291,21 +298,18 @@ class EtreFacture(models.Model):
         """
         Validation : vérifier qu'une expédition n'est pas déjà facturée.
         """
-        if self.pk is None:
+        if EtreFacture.objects.filter(numexp=self.numexp).exclude(pk=self.pk).exists():
             if EtreFacture.objects.filter(numexp=self.numexp).exists():
                 raise ValidationError(
                     f"L'expédition {self.numexp.numexp} est déjà facturée."
                 )
     
     def save(self, *args, **kwargs):
-        """
-        Recalcule le montant de la facture après ajout d'une expédition.
-        """
         self.full_clean()
         super().save(*args, **kwargs)
         self.code_facture.calculer_montant_depuis_expeditions()
-        self.code_facture.save()
-    
+        self.code_facture.save(update_fields=['ht', 'tva', 'ttc'])
+
     def delete(self, *args, **kwargs):
         """
         Recalcule le montant de la facture après retrait d'une expédition.

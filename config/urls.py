@@ -13,6 +13,13 @@ from logistique.api_views import (
 )
 
 # Création du router global unique
+from clients.views import ClientViewSet,HistoriqueViewSet,ReclamationViewSet,RapportViewSet, ContientViewSet
+
+
+
+
+
+# Création d’un router global
 router = DefaultRouter()
 
 # 1. Routes de l'app Logistique (Ton travail)
@@ -30,6 +37,15 @@ router.register('incidents', IncidentViewSet, basename='incident')
 router.register('factures', FactureViewSet, basename='facture')
 router.register('paiements', PaiementViewSet, basename='paiement')
 router.register('expeditions-facturees', EtreFactureViewSet, basename='etre-facture')
+
+#routes pour lapp clients 
+
+router.register('clients', ClientViewSet, basename='client')
+router.register('historiques', HistoriqueViewSet, basename='historique')
+router.register('reclamations', ReclamationViewSet, basename='reclamation')
+router.register('rapports', RapportViewSet, basename='rapport')
+router.register('contient', ContientViewSet, basename='contient')
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),

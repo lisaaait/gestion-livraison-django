@@ -115,6 +115,8 @@ class IncidentAdmin(admin.ModelAdmin):
         'code_inc',
         'numexp',
         'type',
+        'wilaya',
+        'commune',
         'etat_badge',
         'date_creation',
         'date_resolution',
@@ -145,7 +147,7 @@ class IncidentAdmin(admin.ModelAdmin):
             'fields': ('code_inc', 'numexp', 'type', 'etat')
         }),
         ('Détails', {
-            'fields': ('commentaire', 'piece_jointe')
+            'fields': ('commentaire', 'piece_jointe', 'wilaya', 'commune')
         }),
         ('Résolution', {
             'fields': ('resolution', 'date_resolution')

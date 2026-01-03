@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from django.db.models import Count, Q
+from django.db.models.functions import TruncMonth
+from django.utils import timezone
 from .models import Expedition, Incident
 from .serializers import (
     ExpeditionListSerializer,
@@ -13,6 +15,20 @@ from .serializers import (
     IncidentDetailSerializer,
     IncidentCreateUpdateSerializer
 )
+
+def _add_months(dt, months):
+    month_index = dt.month - 1 + months
+    year = dt.year + month_index // 12
+    month = month_index % 12 + 1
+    return dt.replace(year=year, month=month, day=1)
+
+
+def _month_range(months):
+    now = timezone.now()
+    start = _add_months(now.replace(day=1, hour=0, minute=0, second=0, microsecond=0), -(months - 1))
+    end = _add_months(start, months)
+    month_starts = [_add_months(start, i) for i in range(months)]
+    return start, end, month_starts
 
 
 class ExpeditionViewSet(viewsets.ModelViewSet):
@@ -82,6 +98,44 @@ class ExpeditionViewSet(viewsets.ModelViewSet):
         
         serializer = ExpeditionListSerializer(expeditions, many=True)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['get'])
+    def evolution(self, request):
+        """Taux d'Ç¸volution mensuel du nombre d'expÇ¸ditions"""
+        try:
+            months = int(request.query_params.get('months', 12))
+        except ValueError:
+            months = 12
+        if months < 1:
+            months = 1
+
+        start, end, month_starts = _month_range(months)
+        grouped = (
+            self.queryset.filter(date_creation__gte=start, date_creation__lt=end)
+            .annotate(month=TruncMonth('date_creation'))
+            .values('month')
+            .annotate(total=Count('numexp'))
+            .order_by('month')
+        )
+        totals = {item['month'].strftime('%Y-%m'): item['total'] for item in grouped}
+
+        data = []
+        prev_total = None
+        for month_start in month_starts:
+            key = month_start.strftime('%Y-%m')
+            total = totals.get(key, 0)
+            if prev_total in (None, 0):
+                evolution = None
+            else:
+                evolution = round(((total - prev_total) / prev_total) * 100, 2)
+            data.append({
+                'month': key,
+                'total_expeditions': total,
+                'evolution_percent': evolution,
+            })
+            prev_total = total
+
+        return Response({'months': months, 'data': data})
     
     @action(detail=True, methods=['get'])
     def incidents(self, request, pk=None):
@@ -110,8 +164,8 @@ class IncidentViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     
     # Filtres disponibles
-    filterset_fields = ['type', 'etat', 'numexp']
-    search_fields = ['code_inc', 'commentaire', 'resolution']
+    filterset_fields = ['type', 'etat', 'numexp', 'wilaya', 'commune']
+    search_fields = ['code_inc', 'commentaire', 'resolution', 'wilaya', 'commune']
     ordering_fields = ['date_creation', 'date_resolution', 'etat']
     ordering = ['-date_creation']
     
@@ -139,6 +193,27 @@ class IncidentViewSet(viewsets.ModelViewSet):
             ).count()
         }
         return Response(stats)
+
+    @action(detail=False, methods=['get'])
+    def zones(self, request):
+        """Zones gÇ¸ographiques avec le plus d'incidents"""
+        try:
+            limit = int(request.query_params.get('limit', 10))
+        except ValueError:
+            limit = 10
+        if limit < 1:
+            limit = 1
+
+        zones = (
+            self.queryset.exclude(wilaya__isnull=True)
+            .exclude(wilaya__exact='')
+            .values('wilaya', 'commune')
+            .annotate(total=Count('code_inc'))
+            .order_by('-total')
+        )
+        if limit:
+            zones = zones[:limit]
+        return Response(list(zones))
     
     @action(detail=True, methods=['post'])
     def resoudre(self, request, pk=None):
