@@ -6,7 +6,7 @@ import Expeditions from "./pages/admin/Expeditions";
 import Factures from "./pages/admin/Factures";
 import Clients from "./pages/admin/client";
 import Paiements from "./pages/admin/Paiements";
-import Reclamations from "./pages/admin/reclamation";
+import Reclamations from "./pages/admin/Reclamation";
 import Incidents from "./pages/admin/Incidents";
 function App() {
   return (

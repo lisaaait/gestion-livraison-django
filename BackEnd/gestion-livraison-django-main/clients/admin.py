@@ -9,3 +9,4 @@ admin.site.register(Historique)
 admin.site.register(Reclamation)
 admin.site.register(Rapport)
 admin.site.register(Contient)
+#this class is responsible administering the models in the Django admin interface

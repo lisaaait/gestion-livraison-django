@@ -10,7 +10,6 @@ import { ReclamationProvider } from "./context/ReclamationContext";
 import { IncidentProvider } from "./context/incidentContext";
 import "./index.css";
 
-
 ReactDOM.createRoot(document.getElementById("root")).render(
   <BrowserRouter>
     <ExpeditionProvider>
@@ -18,9 +17,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
         <ClientProvider>
           <PaiementProvider>
             <ReclamationProvider>
-            <IncidentProvider>
-            <App />
-            </IncidentProvider>
+              <IncidentProvider>
+                <App />
+              </IncidentProvider>
             </ReclamationProvider>
           </PaiementProvider>
         </ClientProvider>

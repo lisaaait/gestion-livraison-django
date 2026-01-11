@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mydb
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  web:
+    # This points Docker to the folder containing your Dockerfile
+    build: ./BackEnd/gestion-livraison-django-main
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      # This ensures your code changes sync to the container
+      - ./BackEnd/gestion-livraison-django-main:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+  frontend:
+    build: ./FrontEnd
+    ports:
+      - "3000:80"
+    depends_on:
+      - web
+
+volumes:
+  postgres-data:

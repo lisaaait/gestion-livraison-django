@@ -11,7 +11,7 @@ class Client(models.Model):
     Solde = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
 
     def __str__(self):
-        return f"{self.Nom} {self.Prenom}"
+        return f"{self.Nom} {self.Prenom}" #this methode returns the name of the client instead of the object reference
 
 
 # HISTORIQUE table

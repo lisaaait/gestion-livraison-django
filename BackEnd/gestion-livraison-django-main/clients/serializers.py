@@ -34,4 +34,4 @@ class ContientSerializer(serializers.ModelSerializer):
 
 
 
-#this class is responible into turning 
+#this class is responible into turning the complex data into simple data that can be rendered into json
