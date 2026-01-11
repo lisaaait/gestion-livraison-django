@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_DB=deliverydb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build: ./back/gestion-livraison-django-main
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./back/gestion-livraison-django-main:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+
+  frontend:
+    build: ./FrontEnd
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./FrontEnd:/app
+      - /app/node_modules
+    depends_on:
+      - web
+
+volumes:
+  postgres_data:

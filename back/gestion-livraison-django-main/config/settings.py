@@ -17,11 +17,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     # Librairies tierces
     'rest_framework',
     'rest_framework_simplejwt',
-    'django_filters',  
-    'corsheaders', 
+    'django_filters',   
     # Tes Apps locales
     'clients',
     'facturation',
