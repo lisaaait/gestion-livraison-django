@@ -256,7 +256,7 @@ const handleCreateSubmit = async (values) => {
       title: "Actions",
       key: "actions",
       width: 200,
-      fixed: "right",
+      // fixed: "right",
       render: (_, record) => (
         <Space size="small">
           <Button
@@ -301,7 +301,7 @@ const handleCreateSubmit = async (values) => {
   ];
 
   return (
-    <div style={{ width: "100%", height: "100%" }}>
+    <div style={{ width: "85vw", height: "100%" }}>
       <Card title="Gestion des Factures" bordered={false} style={{ width: "100%" }}>
         <Space direction="vertical" style={{ width: "100%" }} size="large">
           <Space style={{ width: "100%", justifyContent: "space-between" }}>

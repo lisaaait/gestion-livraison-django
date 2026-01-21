@@ -1,4 +1,4 @@
-import { Menu, Layout, Avatar, Space } from "antd";
+import { Menu, Layout, Avatar, Space ,Modal} from "antd";
 import { Dropdown } from "antd";
 import {
   TruckOutlined,
@@ -12,27 +12,36 @@ import {
   CalculatorOutlined,
   LogoutOutlined,
   SettingOutlined,
+   IdcardOutlined,
+  DeploymentUnitOutlined,
 } from "@ant-design/icons";
 import { Link, useLocation,useNavigate } from "react-router-dom";
+import AuthService from "../services/AuthService";
 
 const { Sider } = Layout;
 
 const Sidebar = () => {
   const location = useLocation();
 const navigate = useNavigate();
- const showLogoutConfirm = () => {
-    Modal.confirm({
-      title: "Déconnexion",
-      content: "Voulez-vous vraiment vous déconnecter ?",
-      cancelText: "Annuler",
-      okText: "Oui",
-      okType: "danger",
-      onOk() {
-        navigate("/");
-      },
-      centered: true,
-    });
-  };
+const showLogoutConfirm = () => {
+  Modal.confirm({
+    title: "Déconnexion",
+    content: "Voulez-vous vraiment vous déconnecter ?",
+    cancelText: "Annuler",
+    okText: "Oui",
+    okType: "danger",
+    centered: true,
+    async onOk() {
+      try {
+        await AuthService.logout(); 
+        navigate("/login");              // retour login
+      } catch (error) {
+        console.error("Erreur logout:", error);
+      }
+    },
+  });
+};
+
   const menuItems = [
     {
       key: "/admin",
@@ -75,22 +84,29 @@ const navigate = useNavigate();
       
     },
     {
+    key: "/admin/chauffeurs",
+    icon: < IdcardOutlined />,
+    label: <Link to="/admin/chauffeurs">Chauffeurs</Link>,
+  },
+  {
+    key: "/admin/vehicules",
+    icon: <CarOutlined />,
+    label: <Link to="/admin/vehicules">Véhicules</Link>,
+  },
+    {
       key: "/admin/tournees",
-      icon: <CarOutlined />,
+      icon: <DeploymentUnitOutlined />,
       label: <Link to="/admin/tournees">Tournées</Link>,
-      disabled: true,
     },
     {
       key: "/admin/destinations",
       icon: <EnvironmentOutlined />,
       label: <Link to="/admin/destinations">Destinations</Link>,
-      disabled: true,
     },
     {
       key: "/admin/tarification",
       icon: <CalculatorOutlined />,
       label: <Link to="/admin/tarification">Tarification</Link>,
-      disabled: true,
     },
   ];
 const logOutBtn = [ 
@@ -107,7 +123,7 @@ const logOutBtn = [
 
   return (
     <Sider
-      width={250}
+      width={"15vw"}
       style={{
         overflow: "auto",
         height: "100vh",
@@ -131,7 +147,8 @@ const logOutBtn = [
           borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
         }}
       >
-        🚚 LogiSys
+        <img src="../../public/sahara-expres.png" alt="" style={{width : "30px", marginRight : "5px"}}/>
+        <p>Sahara Express</p>
       </div>
       <Menu
         theme="dark"
@@ -144,7 +161,7 @@ const logOutBtn = [
       theme="dark"
         mode="inline"
         selectedKeys={[location.pathname]}
-        style={{ marginTop:"auto"}}
+        style={{ marginTop:"6vh"}}
         items={logOutBtn}/>
     </Sider>
   );

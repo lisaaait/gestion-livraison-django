@@ -13,10 +13,21 @@ valideur_matricule = RegexValidator(regex=r'^[0-9]{6}$', message="Le matricule d
 
 class Destination(models.Model):
     ZONE_CHOICES = [('NORD', 'Nord'), ('SUD', 'Sud'), ('EST', 'Est'), ('OUEST', 'Ouest'), ('CENTRE', 'Centre')]
-    code_d = models.CharField(max_length=10, primary_key=True)
+    code_d = models.CharField(max_length=10, primary_key=True ,editable=False)
     ville = models.CharField(max_length=100)
     pays = models.CharField(max_length=100, default="Algérie")
     zone_geo = models.CharField("Zone Géographique", max_length=10, choices=ZONE_CHOICES)
+    def save(self, *args, **kwargs):  #AJOUTÉ PAR ZAKI
+        if not self.code_d:
+            # On cherche le dernier code existant qui commence par "Des-"
+            dernier = Destination.objects.filter(code_d__startswith='Des-').order_by('-code_d').first()
+            if dernier:
+                # On récupère le numéro et on incrémente
+                dernier_num = int(dernier.code_d.split('-')[1])
+                self.code_d = f"Des-{dernier_num + 1}"
+            else:
+                self.code_d = "Des-1"
+        super().save(*args, **kwargs)
     def __str__(self): return f"{self.ville} ({self.get_zone_geo_display()})"
 
 class Tarification(models.Model):

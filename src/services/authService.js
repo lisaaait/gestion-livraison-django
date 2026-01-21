@@ -1,28 +1,32 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = 'http://127.0.0.1:8000';
 
 class AuthService {
   async login(username, password) {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/login/`, {
+      const response = await fetch(`${API_BASE_URL}/accounts/login/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erreur de connexion');
+      const contentType = response.headers.get("content-type");
+      let data;
+
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(`Réponse inattendue du serveur: ${text}`);
       }
 
-      const data = await response.json();
-      
-      // Stocker les tokens et les infos utilisateur
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur de connexion');
+      }
+
       localStorage.setItem('accessToken', data.access);
       localStorage.setItem('refreshToken', data.refresh);
       localStorage.setItem('user', JSON.stringify(data.user));
-      
+
       return data;
     } catch (error) {
       throw error;
@@ -31,25 +35,30 @@ class AuthService {
 
   async register(userData) {
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/register/`, {
+      const response = await fetch(`${API_BASE_URL}/accounts/register/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Erreur d\'inscription');
+      const contentType = response.headers.get("content-type");
+      let data;
+
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(`Réponse inattendue du serveur: ${text}`);
       }
 
-      const data = await response.json();
-      
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur d\'inscription');
+      }
+
       localStorage.setItem('accessToken', data.access);
       localStorage.setItem('refreshToken', data.refresh);
       localStorage.setItem('user', JSON.stringify(data.user));
-      
+
       return data;
     } catch (error) {
       throw error;
@@ -62,7 +71,7 @@ class AuthService {
       const accessToken = localStorage.getItem('accessToken');
 
       if (refreshToken) {
-        await fetch(`${API_BASE_URL}/auth/logout/`, {
+        await fetch(`${API_BASE_URL}/accounts/logout/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -83,26 +92,18 @@ class AuthService {
   async refreshToken() {
     try {
       const refreshToken = localStorage.getItem('refreshToken');
-      
-      if (!refreshToken) {
-        throw new Error('No refresh token');
-      }
+      if (!refreshToken) throw new Error('No refresh token');
 
-      const response = await fetch(`${API_BASE_URL}/auth/token/refresh/`, {
+      const response = await fetch(`${API_BASE_URL}/token/refresh/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refresh: refreshToken }),
       });
 
-      if (!response.ok) {
-        throw new Error('Token refresh failed');
-      }
+      if (!response.ok) throw new Error('Token refresh failed');
 
       const data = await response.json();
       localStorage.setItem('accessToken', data.access);
-      
       return data.access;
     } catch (error) {
       this.logout();

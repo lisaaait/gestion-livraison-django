@@ -180,18 +180,51 @@ export const IncidentProvider = ({ children }) => {
     }
   };
 
-  // --- Résoudre incident ---
-  const resoudreIncident = async (code_inc, resolution) => {
-    try {
-      await api.incidents.resoudre(code_inc, resolution);
-      message.success("Incident résolu !");
-      await fetchIncidents();
-    } catch (error) {
-      console.error("❌ Erreur résolution incident:", error);
-      const errorMsg = error.response?.data?.error || "Impossible de résoudre l'incident";
-      message.error(errorMsg);
+
+ // --- Résoudre incident ---
+const resoudreIncident = async (code_inc, resolution) => {
+  try {
+    console.log(` Résolution de l'incident ${code_inc}:`, resolution);
+    
+    // Trouver l'incident actuel
+    const incidentActuel = incidents.find(i => i.code_inc === code_inc);
+    if (!incidentActuel) {
+      throw new Error("Incident non trouvé");
     }
-  };
+
+    
+    const payload = {
+      type: incidentActuel.type,
+      commentaire: incidentActuel.commentaire,
+      numexp: incidentActuel.numexp,
+      wilaya: incidentActuel.wilaya,
+      commune: incidentActuel.commune,
+      etat: 'RESOLU',
+      resolution: resolution,
+    };
+
+    console.log("Payload pour résolution:", payload);
+
+    // Utiliser api.incidents.update au lieu de api.incidents.resoudre
+    const response = await api.incidents.update(code_inc, payload);
+    console.log(" Incident résolu:", response);
+    
+    message.success("Incident résolu avec succès !");
+    await fetchIncidents();
+    
+    return response;
+  } catch (error) {
+    console.error("❌ Erreur résolution incident:", error);
+    console.error("Détails de l'erreur:", error.response?.data);
+    
+    const errorMsg = error.response?.data?.resolution?.[0]
+      || error.response?.data?.detail
+      || "Impossible de résoudre l'incident";
+    message.error(errorMsg);
+    
+    throw error;
+  }
+};
 
   // --- Helper pour affichage de l'état ---
   const getEtatDisplay = (etat) => {

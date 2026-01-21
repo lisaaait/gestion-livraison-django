@@ -3,9 +3,11 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate
-from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, get_user_model # Ajoute get_user_model
 from rest_framework import serializers
+# from django.contrib.auth.models import User
+User = get_user_model()
+
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
@@ -15,38 +17,31 @@ class UserSerializer(serializers.ModelSerializer):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login_view(request):
-    username = request.data.get('username')
+    # On récupère ce que l'utilisateur a tapé dans le champ "Email" du React
+    email = request.data.get('username') # React envoie 'username', mais c'est l'email
     password = request.data.get('password')
     
-    if not username or not password:
-        return Response(
-            {'error': 'Veuillez fournir un nom d\'utilisateur et un mot de passe'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    if not email or not password:
+        return Response({'error': 'Email et mot de passe requis'}, status=status.HTTP_400_BAD_REQUEST)
     
-    user = authenticate(username=username, password=password)
+    # IMPORTANT : Comme ton modèle utilise l'email en USERNAME_FIELD, 
+    # on doit passer l'email au paramètre 'username' de authenticate
+    user = authenticate(username=email, password=password)
     
     if user is not None:
         refresh = RefreshToken.for_user(user)
-        
         return Response({
             'access': str(refresh.access_token),
             'refresh': str(refresh),
             'user': {
                 'id': user.id,
-                'username': user.username,
                 'email': user.email,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                'is_staff': user.is_staff,
-                'is_superuser': user.is_superuser,
+                'role': user.role,
+                'username': user.username
             }
         })
     else:
-        return Response(
-            {'error': 'Identifiants invalides'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
+        return Response({'error': 'Identifiants invalides'}, status=status.HTTP_401_UNAUTHORIZED)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])

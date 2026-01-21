@@ -161,8 +161,8 @@ const client = () => {
     {
       title: "Actions",
       key: "actions",
-      width: 200,
-      fixed: "right",
+      width: 260,
+      // fixed: "right",
       render: (_, record) => (
         <Space size="small">
           <Button type="link" icon={<EyeOutlined />} onClick={() => handleVoirDetails(record)} size="small">Détails</Button>
@@ -185,15 +185,17 @@ const client = () => {
 
   return (
     <div style={{ 
-      height: "100%",
-      display: "flex",
-      flexDirection: "column",
-      overflow: "hidden",
-      padding: "20px"
+      width: "84vw",
+      height: "100vh",
+      // display: "flex",
+      // flexDirection: "column",
+      // overflow: "hidden",
+      // padding: "20px"
     }}>
       <Card 
         title="Gestion des Clients" 
         style={{ 
+          width: "100%",
           height: "100%",
           display: "flex",
           flexDirection: "column"

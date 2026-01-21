@@ -127,11 +127,7 @@ class IncidentListSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Incident
-        fields = [
-            'code_inc', 'type', 'type_display', 'etat', 'etat_display',
-            'numexp', 'expedition', 'wilaya', "commune",'commentaire', 'date_creation', 
-            
-        ]
+        fields = '__all__'
     
     def get_expedition(self, obj):
      return f"EXP-{obj.numexp.numexp}" if obj.numexp else None
@@ -141,16 +137,12 @@ class IncidentDetailSerializer(serializers.ModelSerializer):
     """Serializer détaillé pour un incident"""
     type_display = serializers.CharField(source='get_type_display', read_only=True)
     etat_display = serializers.CharField(source='get_etat_display', read_only=True)
-    expedition_info = ExpeditionListSerializer(source='numexp', read_only=True)
+    expedition_info = serializers.SerializerMethodField()
     expedition = serializers.SerializerMethodField()
     
     class Meta:
         model = Incident
-        fields = [
-            'code_inc', 'type', 'type_display', 'etat', 'etat_display',
-            'numexp', 'expedition','wilaya','commune' 'expedition_info', 'commentaire', 
-            'piece_jointe', 'resolution', 'date_creation', 'date_resolution'
-        ]
+        fields = '__all__'
     
     def get_expedition(self, obj):
      return f"EXP-{obj.numexp.numexp}" if obj.numexp else None

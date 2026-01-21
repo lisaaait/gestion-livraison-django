@@ -227,7 +227,7 @@ const Paiements = () => {
     {
       title: "Actions",
       key: "actions",
-      fixed: "right",
+      // fixed: "right",
       width: 150,
       render: (_, record) => (
         <Space size="small">
@@ -256,7 +256,7 @@ const Paiements = () => {
   ];
 
   return (
-    <div style={{ width: "100%", height: "100%" }}>
+    <div style={{ width: "84vw", height: "100%" }}>
       {/* Statistiques */}
       {stats && (
         <Row gutter={16} style={{ marginBottom: 24 }}>

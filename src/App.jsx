@@ -8,6 +8,11 @@ import Clients from "./pages/admin/client";
 import Paiements from "./pages/admin/Paiements";
 import Reclamations from "./pages/admin/reclamation";
 import Incidents from "./pages/admin/Incidents";
+import Chauffeur from "./pages/admin/Chauffeur";
+import Vehicule from "./pages/admin/Vehicule";
+import Tournee from "./pages/admin/Tournee";
+import Destination from "./pages/admin/Destination";
+import Tarification from "./pages/admin/Tarification";
 function App() {
   return (
     <Routes>
@@ -22,17 +27,15 @@ function App() {
         <Route path="expeditions" element={<Expeditions />} />
         <Route path="factures" element={<Factures />} />
         <Route path="paiements" element={<Paiements />} />
-         <Route path="reclamations" element={<Reclamations />} />
+        <Route path="reclamations" element={<Reclamations />} />
         <Route path="incidents" element={<Incidents />} />
-        <Route path="paiements" element={<Paiements />} />
+        <Route path="chauffeurs" element={<Chauffeur />} />
+        <Route path="vehicules" element={<Vehicule />} />
+        <Route path="tournees" element={<Tournee />} />
+        <Route path="destinations" element={<Destination />} />
+        <Route path="tarification" element={<Tarification />} />
         {/* Routes vides pour les autres sections */}
-        <Route path="clients" element={<ComingSoon title="Clients" />} />
-        <Route path="factures" element={<ComingSoon title="Factures" />} />
-        <Route path="paiements" element={<ComingSoon title="Paiements" />} />
        
-        <Route path="tournees" element={<ComingSoon title="Tournées" />} />
-        <Route path="destinations" element={<ComingSoon title="Destinations" />} />
-        <Route path="tarification" element={<ComingSoon title="Tarification" />} />
       </Route>
 
       {/* Redirection par défaut */}

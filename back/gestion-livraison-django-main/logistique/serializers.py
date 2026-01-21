@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import Chauffeur, Vehicule, Destination, Tarification, Tournee, Expedition
 
 class DestinationSerializer(serializers.ModelSerializer):
+    code_d = serializers.ReadOnlyField() # ajoutéé par zaki
     class Meta:
         model = Destination
         fields = '__all__'

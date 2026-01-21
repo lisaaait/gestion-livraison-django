@@ -75,3 +75,11 @@ body {
     margin-bottom: 10px;
     visibility: hidden;
 }
+.auth-switch {
+  font-size: 14px;
+  text-decoration: underline;
+  transition: 0.3s;
+}
+.auth-switch:hover {
+  color: #ff9800; /* Ou une couleur de ton choix */
+}

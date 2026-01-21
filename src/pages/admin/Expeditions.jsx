@@ -302,13 +302,14 @@ const Expeditions = () => {
       title: "Actions",
       key: "actions",
       width: 280,
-      fixed: "right",
+      // fixed: "right",
       render: (_, record) => {
         const estLivree = record.statut === "LIVREE" || record.statut === "LIVRÉE";
         const peutValider = record.statut === "EN_ATTENTE" || record.statut === "EN_TRANSIT";
         
         return (
-          <Space size="small">
+          
+          <Space  size="small">
             <Tooltip title={!peutValider && !estLivree ? "Statut non validable" : ""}>
               <Button
                 type="primary"
@@ -363,7 +364,8 @@ const Expeditions = () => {
 
   return (
     <div style={{ 
-      height: "100%",
+      width: "85vw",
+      height: "100vh",
       display: "flex",
       flexDirection: "column",
       overflow: "hidden",
