@@ -16,6 +16,7 @@ import {
   Col,
   Statistic,
   DatePicker,
+  Spin,
 } from "antd";
 import {
   SearchOutlined,
@@ -27,6 +28,9 @@ import {
 } from "@ant-design/icons";
 import { useContext, useEffect, useState } from "react";
 import { TourneeContext } from "../../context/TourneeContext.jsx";
+import { VehiculeContext } from "../../context/VehiculeContext.jsx";
+import { ChauffeurContext } from "../../context/ChauffeurContext.jsx";
+import { ExpeditionContext } from "../../context/ExpeditionContext.jsx";
 import dayjs from "dayjs";
 
 const Tournee = () => {
@@ -40,17 +44,25 @@ const Tournee = () => {
     supprimerTournee,
   } = useContext(TourneeContext);
 
+  const { vehicules, fetchVehicules } = useContext(VehiculeContext);
+  const { chauffeurs, fetchChauffeurs } = useContext(ChauffeurContext);
+  const { expeditions, fetchExpeditions } = useContext(ExpeditionContext);
+
   const [searchText, setSearchText] = useState("");
   const [detailsVisible, setDetailsVisible] = useState(false);
   const [selectedTournee, setSelectedTournee] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [form] = Form.useForm();
 
   useEffect(() => {
     fetchTournees();
-  }, [fetchTournees]);
+    fetchVehicules();
+    fetchChauffeurs();
+    fetchExpeditions();
+  }, [fetchTournees, fetchVehicules, fetchChauffeurs, fetchExpeditions]);
 
   const filteredTournees = tournees.filter(
     (t) =>
@@ -58,6 +70,18 @@ const Tournee = () => {
       t.chauffeur?.toString().includes(searchText) ||
       t.vehicule?.toString().includes(searchText)
   );
+
+  // Trouver les infos d'un chauffeur par son ID
+  const getChauffeurInfo = (chauffeurId) => {
+    const chauffeur = chauffeurs.find(c => c.id === chauffeurId || c.matricule === chauffeurId);
+    return chauffeur ? `${chauffeur.nom} ${chauffeur.prenom}` : chauffeurId;
+  };
+
+  // Trouver les infos d'un véhicule par son matricule
+  const getVehiculeInfo = (vehiculeId) => {
+    const vehicule = vehicules.find(v => v.matricule === vehiculeId);
+    return vehicule ? `${vehicule.matricule} - ${vehicule.type_vehicule}` : vehiculeId;
+  };
 
   const getStatutColor = (statut) => {
     switch (statut) {
@@ -100,14 +124,16 @@ const Tournee = () => {
       width: 140,
     },
     {
-      title: "Chauffeur ID",
+      title: "Chauffeur",
       dataIndex: "chauffeur",
-      width: 140,
+      width: 180,
+      render: (chauffeurId) => getChauffeurInfo(chauffeurId),
     },
     {
-      title: "Véhicule ID",
+      title: "Véhicule",
       dataIndex: "vehicule",
-      width: 140,
+      width: 180,
+      render: (vehiculeId) => getVehiculeInfo(vehiculeId),
     },
     {
       title: "Statut",
@@ -176,6 +202,35 @@ const Tournee = () => {
     setModalVisible(true);
   };
 
+  // Afficher tous les véhicules (tu peux filtrer par état si nécessaire)
+  const vehiculesDisponibles = vehicules;
+
+  // Filtrer uniquement les chauffeurs disponibles
+  const chauffeursDisponibles = chauffeurs.filter(
+    c => c.statut === "Disponible" || c.disponibilite === true
+  );
+
+  // Filtrer les expéditions non encore assignées à une tournée
+  const expeditionsDisponibles = Array.isArray(expeditions) 
+    ? expeditions.filter(exp => {
+        const statutsValides = ['EN_ATTENTE', 'EN_TRANSIT'];
+        return statutsValides.includes(exp.statut);
+      })
+    : [];
+
+  // Log pour déboguer
+  console.log("📦 Expéditions disponibles:", expeditionsDisponibles);
+  if (expeditionsDisponibles.length > 0) {
+    console.log("📦 Première expédition:", JSON.stringify(expeditionsDisponibles[0], null, 2));
+    console.log("📦 Structure:", {
+      id: expeditionsDisponibles[0].id,
+      code: expeditionsDisponibles[0].code,
+      numexp: expeditionsDisponibles[0].numexp,
+      typeof_id: typeof expeditionsDisponibles[0].id,
+      typeof_code: typeof expeditionsDisponibles[0].code,
+    });
+  }
+
   return (
     <div style={{ width: "84vw" }}>
       <Card title="Gestion des Tournées">
@@ -189,7 +244,7 @@ const Tournee = () => {
             </Col>
             <Col span={4}>
               <Card>
-                <Statistic title="aujourdHui" value={statistiques.aujourdHui} />
+                <Statistic title="Aujourd'hui" value={statistiques.aujourdHui} />
               </Card>
             </Col>
             <Col span={4}>
@@ -241,7 +296,7 @@ const Tournee = () => {
             rowKey="code_t"
             bordered
             pagination={{ pageSize: 10 }}
-            locale={{ emptyText: <Empty /> }}
+            locale={{ emptyText: <Empty description="Aucune tournée" /> }}
           />
         </Space>
       </Card>
@@ -252,17 +307,28 @@ const Tournee = () => {
         title={isEditing ? "Modifier Tournée" : "Ajouter Tournée"}
         onCancel={() => setModalVisible(false)}
         onOk={() => form.submit()}
+        width={600}
       >
         <Form
           layout="vertical"
           form={form}
           onFinish={async (values) => {
             try {
+              setLoading(true);
+              
+              // Validation : au moins une expédition doit être sélectionnée
+              if (!values.expeditions || values.expeditions.length === 0) {
+                message.error("Veuillez sélectionner au moins une expédition");
+                setLoading(false);
+                return;
+              }
+
               const data = {
+                code_t: values.code_t, // Inclure le code
                 date_tournee: values.date_tournee.format("YYYY-MM-DD"),
                 chauffeur: values.chauffeurId,
                 vehicule: values.vehiculeId,
-                expeditions: values.expeditions || [],
+                expeditions: values.expeditions,
                 statut: values.statut || "EN_COURS",
               };
 
@@ -278,42 +344,111 @@ const Tournee = () => {
               form.resetFields();
             } catch (error) {
               console.error(error);
-              message.error("Erreur lors de l'enregistrement de la tournée");
+              message.error(error.response?.data ? JSON.stringify(error.response.data) : "Erreur lors de l'enregistrement");
+            } finally {
+              setLoading(false);
             }
           }}
         >
+<Form.Item
+  name="expeditions"
+  label="Expéditions"
+  rules={[
+    { required: true, message: "Veuillez sélectionner au moins une expédition" },
+  ]}
+>
+  <Select
+    mode="multiple"
+    placeholder="Sélectionner les expéditions"
+    showSearch
+    optionFilterProp="children"
+    filterOption={(input, option) =>
+      option.children.toLowerCase().includes(input.toLowerCase())
+    }
+  >
+    {expeditionsDisponibles.map((exp) => (
+      <Select.Option
+        key={exp.numexp}        // ✅ clé React
+        value={exp.numexp}      // ✅ PK Django (OBLIGATOIRE)
+      >
+        EXP-{exp.numexp} | Client {exp.clientId} | {exp.poids}kg
+      </Select.Option>
+    ))}
+  </Select>
+</Form.Item>
+
+
+          <Form.Item
+            name="code_t"
+            label="Code tournée"
+            rules={[{ required: true, message: "Veuillez saisir le code" }]}
+          >
+            <Input placeholder="Ex: TRN001" maxLength={10} />
+          </Form.Item>
+
           <Form.Item
             name="date_tournee"
-            label="Date"
-            rules={[{ required: true }]}
+            label="Date de la tournée"
+            rules={[{ required: true, message: "Veuillez sélectionner une date" }]}
           >
-            <DatePicker style={{ width: "100%" }} />
+            <DatePicker 
+              style={{ width: "100%" }} 
+              format="DD/MM/YYYY"
+              placeholder="Sélectionner une date"
+            />
           </Form.Item>
 
           <Form.Item
             name="chauffeurId"
-            label="Chauffeur ID"
-            rules={[{ required: true }]}
+            label="Chauffeur"
+            rules={[{ required: true, message: "Veuillez sélectionner un chauffeur" }]}
           >
-            <Input />
+            <Select
+              placeholder="Sélectionner un chauffeur"
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                option.children.toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {chauffeursDisponibles.map((chauffeur) => (
+                <Select.Option 
+                  key={chauffeur.id || chauffeur.matricule} 
+                  value={chauffeur.id || chauffeur.matricule}
+                >
+                  {chauffeur.nom} {chauffeur.prenom} ({chauffeur.matricule})
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Form.Item
             name="vehiculeId"
-            label="Véhicule ID"
-            rules={[{ required: true }]}
+            label="Véhicule"
+            rules={[{ required: true, message: "Veuillez sélectionner un véhicule" }]}
           >
-            <Input />
+            <Select
+              placeholder="Sélectionner un véhicule"
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                option.children.toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {vehiculesDisponibles.map((vehicule) => (
+                <Select.Option key={vehicule.matricule} value={vehicule.matricule}>
+                  {vehicule.matricule} - {vehicule.type_vehicule} 
+                  ({vehicule.capacite_poids}kg / {vehicule.capacite_volume}m³)
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
 
-          {/* Optionnel : sélection expéditions */}
-          {/* <Form.Item name="expeditions" label="Expéditions">
-            <Select mode="multiple" placeholder="Sélectionner les expéditions">
-              { /* options à remplir dynamiquement si nécessaire */}
-            {/* </Select>
-          </Form.Item> */}
-
-          <Form.Item name="statut" label="Statut">
+          <Form.Item 
+            name="statut" 
+            label="Statut"
+            initialValue="EN_COURS"
+          >
             <Select>
               <Select.Option value="EN_COURS">En cours</Select.Option>
               <Select.Option value="TERMINEE">Terminée</Select.Option>
@@ -344,6 +479,7 @@ const Tournee = () => {
           </Button>,
         ]}
         title="Détails Tournée"
+        width={600}
       >
         {selectedTournee && (
           <Descriptions bordered column={1}>
@@ -355,16 +491,18 @@ const Tournee = () => {
               {dayjs(selectedTournee.date_tournee).format("DD/MM/YYYY")}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Chauffeur ID">
-              {selectedTournee.chauffeur}
+            <Descriptions.Item label="Chauffeur">
+              {getChauffeurInfo(selectedTournee.chauffeur)}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Véhicule ID">
-              {selectedTournee.vehicule}
+            <Descriptions.Item label="Véhicule">
+              {getVehiculeInfo(selectedTournee.vehicule)}
             </Descriptions.Item>
 
             <Descriptions.Item label="Statut">
-              {selectedTournee.statut}
+              <Tag color={getStatutColor(selectedTournee.statut)}>
+                {selectedTournee.statut}
+              </Tag>
             </Descriptions.Item>
           </Descriptions>
         )}

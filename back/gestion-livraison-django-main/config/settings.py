@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     'facturation',
     'logistique',
     'expeditions',
+   
 ]
 
 # --- MIDDLEWARE ---

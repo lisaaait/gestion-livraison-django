@@ -23,8 +23,7 @@ const convertObjectKeys = (obj) => {
       let nk = normalizeKey(k);
 
       // Mappings spécifiques
-      if (nk === "numexp") nk = "code";
-      else if (nk === "codeClient") nk = "clientId";
+      if (nk === "codeClient") nk = "clientId";
       else if (nk === "clientNom") nk = "client";
       else if (nk === "dateCreation") nk = "dateCreation";
       else if (nk === "dateModification") nk = "dateModification";
@@ -41,17 +40,19 @@ const convertObjectKeys = (obj) => {
 
 const prepareExpedition = (raw) => {
   const converted = convertObjectKeys(raw);
-  console.log("🟢 converted.clientNom:", converted.clientNom);
+  console.log("🟢 Données brutes reçues:", raw);
+  console.log("🟢 Après conversion:", converted);
+  
+  // IMPORTANT : garder numexp tel quel (c'est la clé primaire)
   return {
     ...converted,
-    id: converted.code || converted.numexp || converted.id,
-    client: converted.client || converted.clientNom || 'Client inconnu',
-    code: converted.numexp || converted.code,
+    numexp: raw.numexp || raw.Numexp, // Garder le numexp original
+    code: raw.numexp || raw.Numexp || converted.code, // Pour l'affichage
+    id: raw.numexp || raw.Numexp || converted.id, // Pour les opérations
+    client: converted.client || converted.clientNom,
     montantEstime: converted.montantEstime || 0,
     dateCreation: converted.dateCreation || new Date().toISOString(),
-  
   };
- 
 };
 
 // Convertir frontend -> backend
@@ -81,20 +82,16 @@ const convertToBackendPayload = (obj) => {
   const result = {};
   
   for (const [k, v] of Object.entries(obj)) {
-    // Ignorer les valeurs undefined
     if (v === undefined) continue;
     
     let value = v;
     
-    // Gérer les dates moment/dayjs
     if (v && typeof v === "object" && typeof v.format === "function") {
       value = v.format("YYYY-MM-DD");
     }
-    // Gérer les objets imbriqués
     else if (v && typeof v === "object" && !Array.isArray(v)) {
       value = convertToBackendPayload(v);
     }
-    // Gérer les tableaux
     else if (Array.isArray(v)) {
       value = v.map(convertToBackendPayload);
     }
@@ -192,7 +189,7 @@ export const ExpeditionProvider = ({ children }) => {
 
       if (identifierOrRecord && typeof identifierOrRecord === "object") {
         const rec = identifierOrRecord;
-        pk = rec.id ?? rec.code ?? rec.numexp ?? null;
+        pk = rec.numexp ?? rec.id ?? rec.code ?? null;
       } else {
         pk = identifierOrRecord;
       }
@@ -206,6 +203,7 @@ export const ExpeditionProvider = ({ children }) => {
       setExpeditions((prev) =>
         prev.filter(
           (exp) =>
+            String(exp.numexp) !== String(pk) &&
             String(exp.id) !== String(pk) &&
             String(exp.code) !== String(pk)
         )
@@ -216,7 +214,6 @@ export const ExpeditionProvider = ({ children }) => {
     }
   };
 
-  // CORRECTION ICI : Utiliser l'endpoint /valider/ au lieu de PATCH
   const validerExpedition = async (id) => {
     try {
       console.log("✅ Validation de l'expédition:", id);
@@ -227,7 +224,6 @@ export const ExpeditionProvider = ({ children }) => {
       const expeditionMisAJour = prepareExpedition(expeditionMisAJourRaw);
       console.log("✅ Expédition validée préparée:", expeditionMisAJour);
       
-      // Solution simple : rafraîchir toutes les expéditions depuis le serveur
       console.log("🔄 Rafraîchissement de la liste...");
       await fetchExpeditions();
       console.log("✅ Liste rafraîchie");
@@ -257,7 +253,7 @@ export const ExpeditionProvider = ({ children }) => {
         ajouterExpedition,
         modifierExpedition,
         supprimerExpedition,
-        validerExpedition, // CHANGÉ : on exporte validerExpedition au lieu de updateStatut
+        validerExpedition,
         getIncidentsExpedition,
       }}
     >

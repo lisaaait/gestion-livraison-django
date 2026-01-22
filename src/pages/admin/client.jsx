@@ -186,11 +186,11 @@ const client = () => {
   return (
     <div style={{ 
       width: "84vw",
-      height: "100vh",
-      // display: "flex",
-      // flexDirection: "column",
-      // overflow: "hidden",
-      // padding: "20px"
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "auto",
+      padding: "20px"
     }}>
       <Card 
         title="Gestion des Clients" 
@@ -204,7 +204,7 @@ const client = () => {
           flex: 1,
           display: "flex",
           flexDirection: "column",
-          overflow: "hidden",
+          overflow: "auto",
           padding: "24px"
         }}
       >
@@ -245,7 +245,7 @@ const client = () => {
               }} 
               scroll={{ 
                 x: 1600,
-                y: "100%"
+               
               }} 
               locale={{ 
                 emptyText: (

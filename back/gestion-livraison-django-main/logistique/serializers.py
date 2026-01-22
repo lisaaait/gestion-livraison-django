@@ -27,12 +27,27 @@ class VehiculeSerializer(serializers.ModelSerializer):
 
 class TourneeSerializer(serializers.ModelSerializer):
     # Pour React, il est utile d'avoir les détails du chauffeur et du véhicule
+    expeditions = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=Expedition.objects.all(),
+        
+    )
+    chauffeur = serializers.SlugRelatedField(
+        slug_field='code_chauffeur',
+        queryset=Chauffeur.objects.all()
+    )
+    vehicule = serializers.SlugRelatedField(
+        slug_field='matricule',
+        queryset=Vehicule.objects.all()
+    )
+  
     chauffeur_nom = serializers.ReadOnlyField(source='chauffeur.nom')
     vehicule_info = serializers.ReadOnlyField(source='vehicule.matricule')
+   
 
     class Meta:
-        model = Tournee
-        fields = '__all__'
+         model = Tournee
+         fields = '__all__'
 
 class ExpeditionSerializer(serializers.ModelSerializer):
     class Meta:

@@ -5,7 +5,12 @@ export const VehiculeContext = createContext();
 
 export const VehiculeProvider = ({ children }) => {
   const [vehicules, setVehicules] = useState([]);
-  const [statistiques, setStatistiques] = useState({ total: 0, disponibles: 0, enMission: 0, enMaintenance: 0 });
+  const [statistiques, setStatistiques] = useState({ 
+    total: 0, 
+    disponibles: 0, 
+    enMission: 0, 
+    enMaintenance: 0 
+  });
 
   const fetchVehicules = useCallback(async () => {
     try {
@@ -22,29 +27,49 @@ export const VehiculeProvider = ({ children }) => {
 
   const ajouterVehicule = async (vehicule) => {
     try {
+      // Validation du matricule (doit être exactement 6 caractères)
+      let matricule = vehicule.matricule.trim();
+      
+      if (matricule.length > 6) {
+        throw new Error("Le matricule ne peut pas dépasser 6 caractères");
+      }
+      
+      // Padding à 6 caractères si nécessaire
+      matricule = matricule.padStart(6, "0");
+
+      // Construction du payload pour le backend
       const payload = {
-        matricule: String(vehicule.matricule).padStart(6, "0"),
-        type_vehicule: vehicule.type_vehicule.toUpperCase(),
+        matricule: matricule,
+        type_vehicule: vehicule.type_vehicule,
         capacite_poids: Number(vehicule.capacite_poids),
         capacite_volume: Number(vehicule.capacite_volume),
-        etat: "Disponible",
+        etat: "Opérationnel", // ✅ Correspond au défaut du modèle Django
       };
+
+      console.log("Payload envoyé:", payload);
+      console.log("Payload JSON:", JSON.stringify(payload));
+
       const res = await vehiculeAPI.create(payload);
-      const newList = [res, ...vehicules];
-      setVehicules(newList);
-      recalculerStats(newList);
+      await fetchVehicules();
     } catch (error) {
-      console.error("Erreur ajout véhicule", error.response?.data || error.message);
+      console.error("Erreur ajout véhicule - Status:", error.response?.status);
+      console.error("Erreur ajout véhicule - Data:", error.response?.data);
+      console.error("Erreur ajout véhicule - Message:", error.message);
       throw error;
     }
   };
 
   const modifierVehicule = async (matricule, vehiculeModifie) => {
     try {
-      const res = await vehiculeAPI.update(matricule, vehiculeModifie);
-      const newList = vehicules.map(v => v.matricule === matricule ? res : v);
-      setVehicules(newList);
-      recalculerStats(newList);
+      const payload = {
+        matricule: vehiculeModifie.matricule,
+        type_vehicule: vehiculeModifie.type_vehicule,
+        capacite_poids: Number(vehiculeModifie.capacite_poids),
+        capacite_volume: Number(vehiculeModifie.capacite_volume),
+      };
+
+      const res = await vehiculeAPI.update(matricule, payload);
+      await fetchVehicules(); // Rafraîchir la liste
       return res;
     } catch (error) {
       console.error("Erreur modification véhicule", error.response?.data || error.message);
@@ -55,22 +80,20 @@ export const VehiculeProvider = ({ children }) => {
   const changerEtatVehicule = async (matricule, nouvelEtat) => {
     try {
       await vehiculeAPI.patch(matricule, { etat: nouvelEtat });
-      const newList = vehicules.map(v => v.matricule === matricule ? { ...v, etat: nouvelEtat } : v);
-      setVehicules(newList);
-      recalculerStats(newList);
+      await fetchVehicules(); // Rafraîchir la liste
     } catch (error) {
       console.error("Erreur changement état", error.response?.data || error.message);
+      throw error;
     }
   };
 
   const supprimerVehicule = async (matricule) => {
     try {
       await vehiculeAPI.delete(matricule);
-      const newList = vehicules.filter(v => v.matricule !== matricule);
-      setVehicules(newList);
-      recalculerStats(newList);
+      await fetchVehicules(); // Rafraîchir la liste
     } catch (error) {
       console.error("Erreur suppression véhicule", error.response?.data || error.message);
+      throw error;
     }
   };
 
@@ -85,7 +108,17 @@ export const VehiculeProvider = ({ children }) => {
   };
 
   return (
-    <VehiculeContext.Provider value={{ vehicules, statistiques, fetchVehicules, ajouterVehicule, modifierVehicule, supprimerVehicule, changerEtatVehicule }}>
+    <VehiculeContext.Provider 
+      value={{ 
+        vehicules, 
+        statistiques, 
+        fetchVehicules, 
+        ajouterVehicule, 
+        modifierVehicule, 
+        supprimerVehicule, 
+        changerEtatVehicule 
+      }}
+    >
       {children}
     </VehiculeContext.Provider>
   );

@@ -38,25 +38,35 @@ const Vehicules = () => {
 
   const getEtatColor = (etat) => {
     switch (etat) {
-      case "Disponible": return "green";
-      case "En mission": return "blue";
-      case "En maintenance": return "orange";
-      default: return "default";
+      case "Opérationnel":
+      case "Disponible": 
+        return "green";
+      case "En mission": 
+        return "blue";
+      case "En maintenance": 
+        return "orange";
+      default: 
+        return "default";
     }
   };
 
   const getNextEtat = (etat) => {
     switch (etat) {
-      case "Disponible": return "En mission";
-      case "En mission": return "En maintenance";
-      case "En maintenance": return "Disponible";
-      default: return "Disponible";
+      case "Opérationnel":
+      case "Disponible": 
+        return "En mission";
+      case "En mission": 
+        return "En maintenance";
+      case "En maintenance": 
+        return "Opérationnel";
+      default: 
+        return "Opérationnel";
     }
   };
 
-  const handleSupprimerVehicule = async (id) => {
+  const handleSupprimerVehicule = async (matricule) => {
     try {
-      await supprimerVehicule(id);
+      await supprimerVehicule(matricule);
       message.success("Véhicule supprimé avec succès");
     } catch (error) {
       message.error("Erreur lors de la suppression");
@@ -66,7 +76,7 @@ const Vehicules = () => {
   const handleAjouterModifier = async (values) => {
     try {
       if (isEditing) {
-        await modifierVehicule(selectedVehicule.id, values);
+        await modifierVehicule(selectedVehicule.matricule, values);
         message.success("Véhicule modifié");
       } else {
         await ajouterVehicule(values);
@@ -75,7 +85,10 @@ const Vehicules = () => {
       setModalVisible(false);
       form.resetFields();
     } catch (error) {
-      message.error("Erreur lors de l'ajout/modification du véhicule");
+      const errorMsg = error.response?.data 
+        ? JSON.stringify(error.response.data) 
+        : error.message;
+      message.error(`Erreur: ${errorMsg}`);
     }
   };
 
@@ -94,16 +107,15 @@ const Vehicules = () => {
             Détails
           </Button>
           <Button type="link" icon={<SyncOutlined />} onClick={() => {
-  const nextEtat = getNextEtat(record.etat);
-  changerEtatVehicule(record.matricule, nextEtat); // <-- utiliser matricule
-  message.success(`État changé vers ${nextEtat}`);
-}}>
-  Changer état
-</Button>
-
+            const nextEtat = getNextEtat(record.etat);
+            changerEtatVehicule(record.matricule, nextEtat);
+            message.success(`État changé vers ${nextEtat}`);
+          }}>
+            Changer état
+          </Button>
           <Popconfirm
             title="Êtes-vous sûr ?"
-            onConfirm={() => handleSupprimerVehicule(record.id)}
+            onConfirm={() => handleSupprimerVehicule(record.matricule)}
             okText="Oui"
             cancelText="Non"
           >
@@ -166,8 +178,16 @@ const Vehicules = () => {
         okText={isEditing ? "Modifier" : "Ajouter"}
       >
         <Form layout="vertical" form={form} onFinish={handleAjouterModifier}>
-          <Form.Item name="matricule" label="Matricule" rules={[{ required: true }]}>
-            <Input />
+          <Form.Item 
+            name="matricule" 
+            label="Matricule (max 6 caractères)" 
+            rules={[
+              { required: true, message: "Veuillez saisir le matricule" },
+              { max: 6, message: "Le matricule ne peut pas dépasser 6 caractères" },
+              { pattern: /^[A-Za-z0-9]+$/, message: "Uniquement lettres et chiffres" }
+            ]}
+          >
+            <Input maxLength={6} placeholder="Ex: ABC123" />
           </Form.Item>
           <Form.Item name="type_vehicule" label="Type de véhicule" rules={[{ required: true }]}>
             <Select placeholder="Choisir un type">
@@ -176,7 +196,13 @@ const Vehicules = () => {
               <Select.Option value="CAMION">CAMION</Select.Option>
             </Select>
           </Form.Item>
-          <Form.Item name="capacite_poids" label="Capacité poids (kg)" rules={[{ required: true }]}>
+          <Form.Item 
+            name="capacite_poids" 
+            label="Capacité poids (kg)" 
+            rules={[
+              { required: true, message: "Veuillez saisir la capacité" }
+            ]}
+          >
             <InputNumber style={{ width: "100%" }} min={0} />
           </Form.Item>
           <Form.Item name="capacite_volume" label="Capacité volume (m³)" rules={[{ required: true }]}>
@@ -197,8 +223,8 @@ const Vehicules = () => {
         {selectedVehicule && (
           <Descriptions bordered column={1}>
             <Descriptions.Item label="Type">{selectedVehicule.type_vehicule}</Descriptions.Item>
-            <Descriptions.Item label="Capacité poids">{selectedVehicule.capacite_poids}</Descriptions.Item>
-            <Descriptions.Item label="Capacité volume">{selectedVehicule.capacite_volume}</Descriptions.Item>
+            <Descriptions.Item label="Capacité poids">{selectedVehicule.capacite_poids} kg</Descriptions.Item>
+            <Descriptions.Item label="Capacité volume">{selectedVehicule.capacite_volume} m³</Descriptions.Item>
             <Descriptions.Item label="État"><Tag color={getEtatColor(selectedVehicule.etat)}>{selectedVehicule.etat}</Tag></Descriptions.Item>
           </Descriptions>
         )}
