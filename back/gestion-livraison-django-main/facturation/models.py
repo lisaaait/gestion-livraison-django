@@ -125,7 +125,6 @@ class Facture(models.Model):
     
     def montant_restant(self):
         """
-        ✅ CORRIGÉ: Alias pour reste_a_payer() retournant un float (compatibilité frontend)
         """
         return float(self.reste_a_payer())
     
@@ -177,7 +176,6 @@ class Paiement(models.Model):
         verbose_name="Mode de paiement"
     )
     
-    # ✅ FK vers FACTURE
     code_facture = models.ForeignKey(
         Facture,
         on_delete=models.CASCADE,
@@ -256,7 +254,7 @@ class EtreFacture(models.Model):
     Table de liaison entre Expédition et Facture.
     """
     
-    # ✅ FK vers EXPEDITION
+
     numexp = models.ForeignKey(
         Expedition,
         on_delete=models.CASCADE,
@@ -264,7 +262,7 @@ class EtreFacture(models.Model):
         related_name='etre_facture_set'
     )
     
-    # ✅ FK vers FACTURE
+ 
     code_facture = models.ForeignKey(
         Facture,
         on_delete=models.CASCADE,
