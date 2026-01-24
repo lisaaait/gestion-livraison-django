@@ -85,7 +85,7 @@ function Login() {
           {loading ? "Chargement..." : isRegistering ? "S'inscrire" : "Se connecter"}
         </button>
 
-        <div className="auth-switch" style={{ marginTop: "15px", color: "white", cursor: "pointer" }}>
+        <div className="auth-switch" style={{ marginTop: "15px", color: "#c4622d", cursor: "pointer" , textAlign: "center" ,fontSize: "17px"}}>
           <span onClick={() => setIsRegistering(!isRegistering)}>
             {isRegistering 
               ? "Déjà un compte ? Connectez-vous" 

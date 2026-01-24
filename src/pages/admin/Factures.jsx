@@ -267,16 +267,6 @@ const handleCreateSubmit = async (values) => {
           >
             Détails
           </Button>
-          {record.montantRestant > 0 && (
-            <Button
-              type="link"
-              icon={<DollarOutlined />}
-              onClick={() => handleAjouterPaiement(record)}
-              size="small"
-            >
-              Payer
-            </Button>
-          )}
           <Button
             type="link"
             icon={<FilePdfOutlined />}
@@ -504,16 +494,28 @@ const handleCreateSubmit = async (values) => {
               </Descriptions.Item>
             </Descriptions>
 
-            <Form form={form} layout="vertical" onFinish={handlePaiementSubmit}>
+            <Form form={form} layout="vertical" onFinish={handlePaiementSubmit} initialValues={{
+                datePaiement: dayjs(),
+                montant: selectedFacture.montantRestant,
+              }}>
               <Form.Item
                 name="montant"
                 label="Montant du paiement"
                 rules={[
                   { required: true, message: "Veuillez saisir le montant" },
-                  {
-                    type: "number",
-                    max: selectedFacture.montantRestant,
-                    message: `Le montant ne peut pas dépasser ${selectedFacture.montantRestant} DA`,
+                 {
+                    validator: (_, value) => {
+                      if (!value) return Promise.resolve();
+                      if (value > selectedFacture.montantRestant) {
+                        return Promise.reject(
+                          new Error(`Le montant ne peut pas dépasser ${selectedFacture.montantRestant} DA`)
+                        );
+                      }
+                      if (value <= 0) {
+                        return Promise.reject(new Error("Le montant doit être supérieur à 0"));
+                      }
+                      return Promise.resolve();
+                    }
                   },
                 ]}
               >
@@ -521,8 +523,10 @@ const handleCreateSubmit = async (values) => {
                   style={{ width: "100%" }}
                   min={0}
                   max={selectedFacture.montantRestant}
-                  formatter={(value) => `${value} DA`}
-                  parser={(value) => value.replace(" DA", "")}
+                  step={100}
+                  precision={2}
+                  placeholder="Montant en DA"
+                  
                 />
               </Form.Item>
 

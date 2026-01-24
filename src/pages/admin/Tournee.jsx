@@ -64,18 +64,21 @@ const Tournee = () => {
     fetchExpeditions();
   }, [fetchTournees, fetchVehicules, fetchChauffeurs, fetchExpeditions]);
 
-  const filteredTournees = tournees.filter(
-    (t) =>
-      (t.code_t || "").toLowerCase().includes(searchText.toLowerCase()) ||
-      t.chauffeur?.toString().includes(searchText) ||
-      t.vehicule?.toString().includes(searchText)
-  );
+  // ✅ Vérifier que tournees est un array avant de filtrer
+  const filteredTournees = Array.isArray(tournees)
+    ? tournees.filter(
+        (t) =>
+          (t.code_t || "").toLowerCase().includes(searchText.toLowerCase()) ||
+          t.chauffeur?.toString().includes(searchText) ||
+          t.vehicule?.toString().includes(searchText)
+      )
+    : [];
 
   // Trouver les infos d'un chauffeur par son ID
-  const getChauffeurInfo = (chauffeurId) => {
+  function getChauffeurInfo(chauffeurId) {
     const chauffeur = chauffeurs.find(c => c.id === chauffeurId || c.matricule === chauffeurId);
     return chauffeur ? `${chauffeur.nom} ${chauffeur.prenom}` : chauffeurId;
-  };
+  }
 
   // Trouver les infos d'un véhicule par son matricule
   const getVehiculeInfo = (vehiculeId) => {

@@ -70,7 +70,15 @@ class Expedition(models.Model):
         related_name='expeditions',
         help_text="Tarif appliqué pour cette expédition"
     )
-    
+    destination = models.ForeignKey(
+        'logistique.Destination',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="Destination",
+        related_name='expeditions',
+        help_text="Destination finale de l'expédition"
+    )
     # Informations complémentaires
     date_creation = models.DateTimeField(
         auto_now_add=True,
@@ -108,6 +116,7 @@ class Expedition(models.Model):
             models.Index(fields=['statut']),
             models.Index(fields=['code_client']),
             models.Index(fields=['date_creation']),
+            models.Index(fields=['destination']),
         ]
     
     def __str__(self):

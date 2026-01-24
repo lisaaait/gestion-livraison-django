@@ -1,11 +1,12 @@
 from rest_framework import serializers
 from .models import Expedition, Incident
 from clients.models import Client
-from logistique.models import Tarification
+from logistique.models import Destination, Tarification
 
 class ExpeditionListSerializer(serializers.ModelSerializer):
     """Serializer simplifié pour la liste des expéditions"""
     client_nom = serializers.CharField(source='code_client.nom', read_only=True)
+    destination_nom = serializers.CharField(source='destination.nom', read_only=True, allow_null=True)
     statut_display = serializers.CharField(source='get_statut_display', read_only=True)
     peut_etre_modifie = serializers.SerializerMethodField()
     peut_etre_supprime = serializers.SerializerMethodField()
@@ -14,7 +15,8 @@ class ExpeditionListSerializer(serializers.ModelSerializer):
         model = Expedition
         fields = [
             'numexp', 'poids', 'volume', 'statut', 'statut_display',
-            'code_client', 'client_nom', 'montant_estime', 'date_creation',
+            'code_client', 'client_nom', 'destination', 'destination_nom', 
+            'montant_estime', 'date_creation',
             'peut_etre_modifie', 'peut_etre_supprime',
         ]
 
@@ -34,6 +36,7 @@ class ExpeditionListSerializer(serializers.ModelSerializer):
 class ExpeditionDetailSerializer(serializers.ModelSerializer):
     """Serializer détaillé pour une expédition"""
     client_nom = serializers.CharField(source='code_client.nom', read_only=True)
+    destination_nom = serializers.CharField(source='destination.nom', read_only=True, allow_null=True)
     tarification_nom = serializers.CharField(source='tarification.type_service.nom', read_only=True)
     statut_display = serializers.CharField(source='get_statut_display', read_only=True)
     peut_etre_modifie = serializers.SerializerMethodField()
@@ -44,7 +47,8 @@ class ExpeditionDetailSerializer(serializers.ModelSerializer):
         model = Expedition
         fields = [
             'numexp', 'code_client', 'client_nom', 'poids', 'volume', 
-            'statut', 'statut_display', 'tarification', 'tarification_nom',
+            'statut', 'statut_display', 'destination', 'destination_nom',
+            'tarification', 'tarification_nom',
             'description', 'montant_estime', 'date_creation', 'date_modification',
             'peut_etre_modifie', 'peut_etre_supprime', 'nb_incidents',
         ]
@@ -90,12 +94,16 @@ class ExpeditionCreateUpdateSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
-    
+    destination = serializers.PrimaryKeyRelatedField(
+        queryset=Destination.objects.all(),
+        required=False,
+        allow_null=True
+    )
     class Meta:
         model = Expedition
         fields = [
             'numexp',
-            'poids', 'volume', 'statut', 'code_client',
+            'poids', 'volume', 'statut', 'code_client','destination',
             'tarification', 'description',
         ]
     

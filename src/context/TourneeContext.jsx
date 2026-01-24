@@ -1,10 +1,14 @@
 import React, { createContext, useState, useCallback } from "react";
 import { tournees as apiTournees } from "../services/api.js";
-
+import { message } from "antd";
+import { api } from "../services/api.js";
 export const TourneeContext = createContext();
+
 
 export const TourneeProvider = ({ children }) => {
   const [tournees, setTournees] = useState([]);
+  const [loading, setLoading] = useState(false);
+
   const [statistiques, setStatistiques] = useState({
     total: 0,
     aujourdHui: 0,
@@ -16,44 +20,72 @@ export const TourneeProvider = ({ children }) => {
   // --- Fetch toutes les tournées ---
   const fetchTournees = useCallback(async () => {
     try {
-      const data = await apiTournees.getAll();
-
-      // Si backend DRF paginé : récupérer data.results
-      const listeTournees = Array.isArray(data.results)
-        ? data.results
-        : Array.isArray(data)
-        ? data
-        : [];
-
-      setTournees(listeTournees);
-      recalculerStats(listeTournees);
+      setLoading(true);
+      const data = await api.tournees.getAll();
+      setTournees(data);
+      recalculerStats(data);
     } catch (error) {
-      console.error("Erreur fetch tournées", error.response?.data || error.message);
-      setTournees([]);
+      console.error("Erreur fetch tournées:", error);
+      message.error("Erreur lors du chargement des tournées");
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   // --- Ajouter tournée ---
-  const ajouterTournee = async (tournee) => {
+  const ajouterTournee = async (data) => {
     try {
       console.log("=== AJOUT TOURNÉE ===");
-      console.log("Données envoyées:", tournee);
-      console.log("JSON:", JSON.stringify(tournee, null, 2));
-
-      const nouvelleTournee = await apiTournees.create(tournee);
       
-      console.log("Réponse backend:", nouvelleTournee);
+      const correctedData = {
+        ...data,
+        expeditions: data.expeditions.map(exp => {
+          return exp.numexp || exp.id || exp.code || exp;
+        })
+      };
       
-      // Rafraîchir la liste complète depuis le serveur
-      await fetchTournees();
+      console.log("✅ Données corrigées:", correctedData);
+      console.log("JSON envoyé:", JSON.stringify(correctedData, null, 2));
       
-      return nouvelleTournee;
+      const response = await api.tournees.create(correctedData);
+      
+      setTournees([...tournees, response]);
+      message.success("Tournée ajoutée avec succès");
+      fetchTournees();
+      return response;
     } catch (error) {
-      console.error("=== ERREUR AJOUT TOURNÉE ===");
-      console.error("Status:", error.response?.status);
-      console.error("Données erreur:", JSON.stringify(error.response?.data, null, 2));
-      console.error("Message:", error.message);
-      throw error; // Relancer l'erreur pour que le composant puisse la gérer
+      console.log("=== ERREUR AJOUT TOURNÉE ===");
+      console.log("Status:", error.response?.status);
+      console.log("Données erreur COMPLÈTES:", error.response?.data);
+      
+      const errorData = error.response?.data;
+      
+      // Afficher TOUS les détails de l'erreur
+      if (errorData?.expeditions) {
+        console.log("🔴 Erreur expeditions:", errorData.expeditions);
+        console.log("🔴 Détail complet:", JSON.stringify(errorData.expeditions, null, 2));
+      }
+      
+      if (errorData?.chauffeur) {
+        console.log("🔴 Erreur chauffeur:", errorData.chauffeur);
+      }
+      
+      if (errorData?.vehicule) {
+        console.log("🔴 Erreur vehicule:", errorData.vehicule);
+      }
+      
+      let errorMsg = "Erreur lors de l'ajout de la tournée";
+      
+      for (const key in errorData) {
+        if (Array.isArray(errorData[key]) && errorData[key].length > 0) {
+          errorMsg = `${key}: ${errorData[key][0]}`;
+          break;
+        }
+      }
+      
+      console.log("📍 Message d'erreur final:", errorMsg);
+      message.error(errorMsg);
+      throw error;
     }
   };
 

@@ -24,13 +24,16 @@ class VehiculeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicule
         fields = '__all__'
-
+class ExpeditionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Expedition
+        fields = '__all__'
 class TourneeSerializer(serializers.ModelSerializer):
     # Pour React, il est utile d'avoir les détails du chauffeur et du véhicule
     expeditions = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=Expedition.objects.all(),
-        
+        required=False
     )
     chauffeur = serializers.SlugRelatedField(
         slug_field='code_chauffeur',
@@ -49,7 +52,3 @@ class TourneeSerializer(serializers.ModelSerializer):
          model = Tournee
          fields = '__all__'
 
-class ExpeditionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Expedition
-        fields = '__all__'

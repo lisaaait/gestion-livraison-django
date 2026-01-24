@@ -26,6 +26,7 @@ import {
 import { useContext, useEffect, useState } from "react";
 import { ExpeditionContext } from "../../context/ExpeditionContext";
 import { ClientContext } from "../../context/clientContext";
+import { DestinationContext } from "../../context/DestinationContext";
 
 const { TextArea } = Input;
 
@@ -41,6 +42,7 @@ const Expeditions = () => {
   } = useContext(ExpeditionContext);
 
   const { clients, fetchClients } = useContext(ClientContext);
+  const { destinations, fetchDestinations } = useContext(DestinationContext);
 
   const [searchText, setSearchText] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
@@ -51,7 +53,8 @@ const Expeditions = () => {
   useEffect(() => {
     fetchExpeditions();
     fetchClients();
-  }, [fetchExpeditions, fetchClients]);
+    fetchDestinations();
+  }, [fetchExpeditions, fetchClients, fetchDestinations]);
 
   const safeString = (v) => (v === null || v === undefined ? "" : String(v));
 
@@ -99,6 +102,7 @@ const Expeditions = () => {
       poids: Number(expedition.poids) || 0.01,
       volume: Number(expedition.volume) || 0.01,
       statut: expedition.statut || 'EN_ATTENTE',
+      destination: expedition.destination || undefined,
       tarification: expedition.tarification || undefined,
       description: expedition.description || '',
     };
@@ -125,6 +129,7 @@ const Expeditions = () => {
         poids: Number(values.poids),
         volume: Number(values.volume),
         statut: values.statut || 'EN_ATTENTE',
+        destination: values.destination || null,
         tarification: values.tarification ? Number(values.tarification) : null,
         description: values.description || '',
       };
@@ -229,19 +234,40 @@ const Expeditions = () => {
       sorter: (a, b) => safeString(a.code).localeCompare(safeString(b.code)),
       fixed: "left",
     },
-    {
+          {
       title: "Client",
       dataIndex: "client",
       key: "client",
       width: 200,
       render: (_, record) => {
-    if (record.client && typeof record.client === 'object') {
-      return `${record.client.nom || ''} ${record.client.prenom || ''}`.trim() || 'Client inconnu';
-    }
-    // Si c'est déjà un string
-    return record.client || 'Client inconnu';
-  },
-},
+        console.log("🔍 Record clientId:", record.clientId);
+        console.log("🔍 Clients disponibles:", clients);
+        console.log("🔍 Nombre de clients:", clients?.length);
+        
+        // Chercher le client dans la liste des clients par clientId
+        const clientId = record.clientId || record.codeClient;
+        const client = clients?.find(c => c.id === clientId || String(c.id) === String(clientId));
+        
+        console.log("🔍 Client trouvé:", client);
+        
+        if (client) {
+          const nom = `${client.nom || ''} ${client.prenom || ''}`.trim();
+          return nom || client.email || 'Client inconnu';
+        }
+        
+        return record.client || 'Client inconnu';
+      },
+    },
+    {
+      title: "Destination",
+      dataIndex: "destinationNom",
+      key: "destination",
+      width: 150,
+      render: (_, record) => {
+        const label = record.destinationNom || record.destination || '-';
+        return label;
+      },
+    },
     {
       title: "Poids (kg)",
       dataIndex: "poids",
@@ -405,7 +431,7 @@ const Expeditions = () => {
           </Button>
         </Space>
 
-        <div style={{ flex: 1, minHeight: 0 }}>
+         <div style={{ flex: 1, minHeight: 0, overflow: "hidden"}}>
           {loading ? (
             <div style={{ textAlign: "center", padding: 40 }}>
               <Spin size="large" />
@@ -421,7 +447,7 @@ const Expeditions = () => {
                 pageSizeOptions: ['10', '20', '50'],
                 showTotal: (total) => `Total: ${total} expéditions`,
               }}
-              scroll={{ x: 1800, y: "100%" }}
+              scroll={{ x: 1800, y: "calc(100vh - 300px)" }}
               bordered
               locale={{
                 emptyText: (
@@ -544,6 +570,28 @@ const Expeditions = () => {
             >
               {/* Vous devrez récupérer la liste des tarifications */}
             </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="destination"
+            label="Destination"
+            rules={[{ required: true, message: "Veuillez sélectionner une destination" }]}
+          >
+            <Select
+              placeholder="Sélectionner une destination"
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+              }
+              options={Array.isArray(destinations) && destinations.length > 0 
+                ? destinations.map((dest) => ({
+                    value: dest.code_d || dest.id,
+                    label: `${dest.code_d} - ${dest.ville}` || `Destination ${dest.code_d || dest.id}`,
+                  }))
+                : []
+              }
+            />
           </Form.Item>
 
           <Form.Item name="description" label="Description">

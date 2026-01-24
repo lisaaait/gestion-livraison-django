@@ -1,5 +1,6 @@
 from rest_framework import viewsets , permissions
 from .models import Chauffeur, Vehicule, Destination, Tarification, Tournee , Expedition
+
 from .serializers import (
     ChauffeurSerializer, VehiculeSerializer, 
     DestinationSerializer, TarificationSerializer, TourneeSerializer , ExpeditionSerializer
@@ -26,6 +27,7 @@ class TarificationViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
 class TourneeViewSet(viewsets.ModelViewSet):
+  
     queryset = Tournee.objects.all()
     serializer_class = TourneeSerializer
     permission_classes = [permissions.IsAuthenticated]

@@ -28,6 +28,7 @@ const convertObjectKeys = (obj) => {
       else if (nk === "dateCreation") nk = "dateCreation";
       else if (nk === "dateModification") nk = "dateModification";
       else if (nk === "montantEstime") nk = "montantEstime";
+      else if (nk === "destinationNom") nk = "destinationNom";
       else if (nk === "statutDisplay") nk = "statutDisplay";
       else if (nk === "peutEtreModifie") nk = "peutEtreModifie";
       else if (nk === "peutEtreSupprime") nk = "peutEtreSupprime";
@@ -50,6 +51,8 @@ const prepareExpedition = (raw) => {
     code: raw.numexp || raw.Numexp || converted.code, // Pour l'affichage
     id: raw.numexp || raw.Numexp || converted.id, // Pour les opérations
     client: converted.client || converted.clientNom,
+    destination: converted.destination,
+    destinationNom: converted.destinationNom,
     montantEstime: converted.montantEstime || 0,
     dateCreation: converted.dateCreation || new Date().toISOString(),
   };
@@ -140,6 +143,7 @@ export const ExpeditionProvider = ({ children }) => {
         volume: expedition.volume || 0,
         statut: expedition.statut || 'EN_ATTENTE',
         code_client: expedition.clientId,
+        destination: expedition.destination || null,
         tarification: expedition.tarification || null,
         description: expedition.description || '',
       };
@@ -164,6 +168,7 @@ export const ExpeditionProvider = ({ children }) => {
         volume: expeditionModifiee.volume,
         statut: expeditionModifiee.statut,
         clientId: expeditionModifiee.clientId,
+        destination: expeditionModifiee.destination,
         tarification: expeditionModifiee.tarification,
         description: expeditionModifiee.description,
       };
