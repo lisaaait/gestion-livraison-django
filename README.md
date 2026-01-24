@@ -5,6 +5,7 @@ Ce projet lance le backend Django dans Docker et le frontend React/Vite en local
 ## Prerequis
 - Docker Desktop (avec Docker Compose)
 - Node.js + npm
+- Base de donnees (Docker) : PostgreSQL
 
 ## Structure du projet
 - Backend Django (Docker) : `back/gestion-livraison-django-main`
