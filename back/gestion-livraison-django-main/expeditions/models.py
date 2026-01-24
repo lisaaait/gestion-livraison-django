@@ -9,7 +9,7 @@ class Expedition(models.Model):
     Calcule automatiquement le montant total basé sur poids, volume et tarification.
     """
     
-    # Choix pour le statut de l'expédition
+   
     STATUT_CHOICES = [
         ('EN_ATTENTE', 'En attente'),
         ('EN_PREPARATION', 'En préparation'),
@@ -81,7 +81,7 @@ class Expedition(models.Model):
         help_text="Destination finale de l'exp??dition"
     )
     
-    # Informations complémentaires
+    
     date_creation = models.DateTimeField(
         auto_now_add=True,
         verbose_name="Date de création"
@@ -230,7 +230,6 @@ class Incident(models.Model):
         verbose_name="Commune",
         help_text="Commune où l'incident a eu lieu"
     )
-    # FK vers EXPEDITION
     numexp = models.ForeignKey(
         Expedition,
         on_delete=models.CASCADE,
