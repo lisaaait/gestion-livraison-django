@@ -157,7 +157,7 @@ class IncidentDetailSerializer(serializers.ModelSerializer):
         model = Incident
         fields = [
             'code_inc', 'type', 'type_display', 'etat', 'etat_display',
-            'numexp', 'expedition','wilaya','commune' 'expedition_info', 'commentaire', 
+            'numexp', 'expedition','wilaya','commune' , 'expedition_info', 'commentaire', 
             'piece_jointe', 'resolution', 'date_creation', 'date_resolution'
         ]
     
