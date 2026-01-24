@@ -13,10 +13,10 @@ Ce projet lance le backend Django dans Docker et le frontend React/Vite en local
 
 ## Demarrage rapide
 
-### 1) Preparation locale (venv + requirements)
+### 1) Preparation locale (venv + requirements) dans le cas ou on n'utilise pas docker 
 ```
-cd C:\Projet_Django
 pip install -r .\back\gestion-livraison-django-main\requirements.txt
+python C:\Projet_Django\back\gestion-livraison-django-main\manage.py runserver
 ```
 
 ### 2) Backend (Docker)
@@ -38,9 +38,13 @@ npm run dev
 - Admin Django : http://localhost:8000/admin
 
 ## Commandes utiles
-Creer un superuser :
+Creer un superuser (docker):
 ```
 docker-compose -f C:\Projet_Django\back\gestion-livraison-django-main\docker-compose.yml exec web python manage.py createsuperuser
+```
+Creer un superuser (sans docker):
+```
+python C:\Projet_Django\back\gestion-livraison-django-main\manage.py createsuperuser
 ```
 Reconstruire les images :
 
