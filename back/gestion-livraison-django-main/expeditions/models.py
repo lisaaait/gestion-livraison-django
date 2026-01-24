@@ -49,7 +49,7 @@ class Expedition(models.Model):
         verbose_name="Statut"
     )
     
-    # ✅ ForeignKey vers Client
+
     code_client = models.ForeignKey(
         'clients.Client',
         on_delete=models.SET_NULL,
@@ -60,7 +60,7 @@ class Expedition(models.Model):
         help_text="Client qui envoie le colis"
     )
     
-    # ✅ ForeignKey vers Tarification
+    
     tarification = models.ForeignKey(
         'logistique.Tarification',
         on_delete=models.SET_NULL,
@@ -70,6 +70,7 @@ class Expedition(models.Model):
         related_name='expeditions',
         help_text="Tarif appliqué pour cette expédition"
     )
+    
     destination = models.ForeignKey(
         'logistique.Destination',
         on_delete=models.SET_NULL,
@@ -77,8 +78,9 @@ class Expedition(models.Model):
         blank=True,
         verbose_name="Destination",
         related_name='expeditions',
-        help_text="Destination finale de l'expédition"
+        help_text="Destination finale de l'exp??dition"
     )
+    
     # Informations complémentaires
     date_creation = models.DateTimeField(
         auto_now_add=True,
@@ -226,7 +228,7 @@ class Incident(models.Model):
         blank=True,
         null=True,
         verbose_name="Commune",
-        help_text="Commune oÇù l'incident a eu lieu"
+        help_text="Commune où l'incident a eu lieu"
     )
     # FK vers EXPEDITION
     numexp = models.ForeignKey(

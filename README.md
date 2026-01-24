@@ -1,16 +1,66 @@
-# React + Vite
+# Gestion Livraison (Backend Docker + Frontend local)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Ce projet lance le backend Django dans Docker et le frontend React/Vite en local.
 
-Currently, two official plugins are available:
+## Prerequis
+- Docker Desktop (avec Docker Compose)
+- Node.js + npm
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Structure du projet
+- Backend Django (Docker) : `back/gestion-livraison-django-main`
+- Frontend React/Vite (local) : racine du repo
 
-## React Compiler
+## Demarrage rapide
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 1) Preparation locale (venv + requirements)
+```
+cd C:\Projet_Django
+.\venv\Scripts\Activate.ps1
+pip install -r .\back\gestion-livraison-django-main\requirements.txt
+```
 
-## Expanding the ESLint configuration
+### 2) Backend (Docker)
+```
+docker-compose -f C:\Projet_Django\back\gestion-livraison-django-main\docker-compose.yml up -d --build
+docker-compose -f C:\Projet_Django\back\gestion-livraison-django-main\docker-compose.yml exec web python manage.py makemigrations
+docker-compose -f C:\Projet_Django\back\gestion-livraison-django-main\docker-compose.yml exec web python manage.py migrate
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 3) Frontend (local)
+```
+npm install
+npm run dev
+```
+
+## Acces / URLs
+- Frontend : http://localhost:5173
+- Backend API : http://localhost:8000/api
+- Admin Django : http://localhost:8000/admin
+
+## Commandes utiles
+Creer un superuser :
+```
+docker-compose -f C:\Projet_Django\back\gestion-livraison-django-main\docker-compose.yml exec web python manage.py createsuperuser
+```
+Reconstruire les images :
+
+```powershell
+docker compose -f C:\Projet_Django\back\gestion-livraison-django-main\docker-compose.yml build
+```
+
+
+Voir les logs :
+```
+docker-compose -f C:\Projet_Django\back\gestion-livraison-django-main\docker-compose.yml logs -f web
+```
+
+Arreter le backend :
+```
+docker-compose -f C:\Projet_Django\back\gestion-livraison-django-main\docker-compose.yml down
+```
+
+## Notes
+- Le backend tourne dans Docker; le frontend tourne en local.
+- Les dependances Python sont installees pendant le build Docker a partir de `back/gestion-livraison-django-main/requirements.txt`.
+- La base de donnees est incluse dans le compose; le frontend n'est pas dans Docker.
+- Le backend vit dans `back/gestion-livraison-django-main` et le frontend a la racine du repo.

@@ -39,7 +39,8 @@ class ExpeditionAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Informations principales', {
-            'fields': ('numexp', 'code_client', 'statut')
+            'fields': ('numexp', 'code_client',
+        'destination', 'statut')
         }),
         ('Détails du colis', {
             'fields': ('poids', 'volume', 'description', 'montant_estime')
@@ -119,6 +120,8 @@ class IncidentAdmin(admin.ModelAdmin):
         'date_creation',
         'date_resolution',
         'a_piece_jointe',
+        'wilaya',
+        'commune',
     ]
     
     list_filter = [
@@ -142,7 +145,7 @@ class IncidentAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Informations principales', {
-            'fields': ('code_inc', 'numexp', 'type', 'etat')
+            'fields': ('code_inc', 'numexp', 'type', 'etat','wilaya','commune')
         }),
         ('Détails', {
             'fields': ('commentaire', 'piece_jointe')
@@ -178,8 +181,8 @@ class IncidentAdmin(admin.ModelAdmin):
     def a_piece_jointe(self, obj):
         """Indique si une pièce jointe est présente"""
         if obj.piece_jointe:
-            return format_html('<span style="color: green;">✓</span>')
-        return format_html('<span style="color: red;">✗</span>')
+            return format_html('<span style="color: {};">{}</span>', 'green', '?')
+        return format_html('<span style="color: {};">{}</span>', 'red', '?')
     a_piece_jointe.short_description = 'PJ'
     
     actions = ['marquer_en_cours', 'marquer_resolu']

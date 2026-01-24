@@ -1,12 +1,13 @@
 from rest_framework import serializers
 from .models import Expedition, Incident
 from clients.models import Client
-from logistique.models import Destination, Tarification
+from logistique.models import Tarification, Destination
 
 class ExpeditionListSerializer(serializers.ModelSerializer):
     """Serializer simplifié pour la liste des expéditions"""
     client_nom = serializers.CharField(source='code_client.nom', read_only=True)
-    destination_nom = serializers.CharField(source='destination.nom', read_only=True, allow_null=True)
+    destination_ville = serializers.CharField(source='destination.ville', read_only=True)
+    destination_zone = serializers.CharField(source='destination.zone_geo', read_only=True)
     statut_display = serializers.CharField(source='get_statut_display', read_only=True)
     peut_etre_modifie = serializers.SerializerMethodField()
     peut_etre_supprime = serializers.SerializerMethodField()
@@ -15,8 +16,7 @@ class ExpeditionListSerializer(serializers.ModelSerializer):
         model = Expedition
         fields = [
             'numexp', 'poids', 'volume', 'statut', 'statut_display',
-            'code_client', 'client_nom', 'destination', 'destination_nom', 
-            'montant_estime', 'date_creation',
+            'code_client', 'client_nom', 'destination', 'destination_ville', 'destination_zone', 'montant_estime', 'date_creation',
             'peut_etre_modifie', 'peut_etre_supprime',
         ]
 
@@ -36,7 +36,8 @@ class ExpeditionListSerializer(serializers.ModelSerializer):
 class ExpeditionDetailSerializer(serializers.ModelSerializer):
     """Serializer détaillé pour une expédition"""
     client_nom = serializers.CharField(source='code_client.nom', read_only=True)
-    destination_nom = serializers.CharField(source='destination.nom', read_only=True, allow_null=True)
+    destination_ville = serializers.CharField(source='destination.ville', read_only=True)
+    destination_zone = serializers.CharField(source='destination.zone_geo', read_only=True)
     tarification_nom = serializers.CharField(source='tarification.type_service.nom', read_only=True)
     statut_display = serializers.CharField(source='get_statut_display', read_only=True)
     peut_etre_modifie = serializers.SerializerMethodField()
@@ -47,8 +48,7 @@ class ExpeditionDetailSerializer(serializers.ModelSerializer):
         model = Expedition
         fields = [
             'numexp', 'code_client', 'client_nom', 'poids', 'volume', 
-            'statut', 'statut_display', 'destination', 'destination_nom',
-            'tarification', 'tarification_nom',
+            'statut', 'statut_display', 'destination', 'destination_ville', 'destination_zone', 'tarification', 'tarification_nom',
             'description', 'montant_estime', 'date_creation', 'date_modification',
             'peut_etre_modifie', 'peut_etre_supprime', 'nb_incidents',
         ]
@@ -99,12 +99,13 @@ class ExpeditionCreateUpdateSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+    
     class Meta:
         model = Expedition
         fields = [
             'numexp',
-            'poids', 'volume', 'statut', 'code_client','destination',
-            'tarification', 'description',
+            'poids', 'volume', 'statut', 'code_client',
+            'destination', 'tarification', 'description',
         ]
     
     def validate(self, data):
@@ -135,7 +136,11 @@ class IncidentListSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Incident
-        fields = '__all__'
+        fields = [
+            'code_inc', 'type', 'type_display', 'etat', 'etat_display',
+            'numexp', 'expedition', 'wilaya', "commune",'commentaire', 'date_creation', 
+            
+        ]
     
     def get_expedition(self, obj):
      return f"EXP-{obj.numexp.numexp}" if obj.numexp else None
@@ -145,12 +150,16 @@ class IncidentDetailSerializer(serializers.ModelSerializer):
     """Serializer détaillé pour un incident"""
     type_display = serializers.CharField(source='get_type_display', read_only=True)
     etat_display = serializers.CharField(source='get_etat_display', read_only=True)
-    expedition_info = serializers.SerializerMethodField()
+    expedition_info = ExpeditionListSerializer(source='numexp', read_only=True)
     expedition = serializers.SerializerMethodField()
     
     class Meta:
         model = Incident
-        fields = '__all__'
+        fields = [
+            'code_inc', 'type', 'type_display', 'etat', 'etat_display',
+            'numexp', 'expedition','wilaya','commune' 'expedition_info', 'commentaire', 
+            'piece_jointe', 'resolution', 'date_creation', 'date_resolution'
+        ]
     
     def get_expedition(self, obj):
      return f"EXP-{obj.numexp.numexp}" if obj.numexp else None

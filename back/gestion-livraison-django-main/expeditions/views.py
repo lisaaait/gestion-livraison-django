@@ -44,12 +44,12 @@ class ExpeditionViewSet(viewsets.ModelViewSet):
     - GET /api/expeditions/par_statut/ : Grouper par statut
     """
     permission_classes = [AllowAny]
-    queryset = Expedition.objects.select_related('code_client', 'tarification').all()
+    queryset = Expedition.objects.select_related('code_client', 'tarification', 'destination').all()
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     
     # Filtres disponibles
-    filterset_fields = ['statut', 'code_client', 'tarification']
-    search_fields = ['numexp', 'description', 'code_client__nom']
+    filterset_fields = ['statut', 'code_client', 'tarification', 'destination']
+    search_fields = ['numexp', 'description', 'code_client__nom', 'destination__ville']
     ordering_fields = ['date_creation', 'montant_estime', 'poids', 'volume']
     ordering = ['-date_creation']
     
@@ -111,7 +111,7 @@ class ExpeditionViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     @action(detail=False, methods=['get'])
     def evolution(self, request):
-        """Taux d'Ç¸volution mensuel du nombre d'expÇ¸ditions"""
+        """Taux d'évolution mensuel du nombre d'expéditions"""
         try:
             months = int(request.query_params.get('months', 12))
         except ValueError:
@@ -241,7 +241,7 @@ class IncidentViewSet(viewsets.ModelViewSet):
         return Response(stats)
     @action(detail=False, methods=['get'])
     def zones(self, request):
-        """Zones gÇ¸ographiques avec le plus d'incidents"""
+        """Zones géographiques avec le plus d'incidents"""
         try:
             limit = int(request.query_params.get('limit', 10))
         except ValueError:

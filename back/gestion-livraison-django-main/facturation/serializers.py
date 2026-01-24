@@ -180,7 +180,6 @@ class PaiementCreateUpdateSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Paiement
-        # ✅ CORRECTION: Ne PAS inclure reference_p car c'est un AutoField (PK)
         fields = ['date', 'montant_verse', 'mode_paiement', 'code_facture', 'remarques']
         extra_kwargs = {
             'remarques': {'required': False, 'allow_blank': True},
