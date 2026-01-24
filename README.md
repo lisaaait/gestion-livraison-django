@@ -15,6 +15,7 @@ Ce projet lance le backend Django dans Docker et le frontend React/Vite en local
 
 ### 1) Preparation locale (venv + requirements) dans le cas ou on n'utilise pas docker 
 ```
+.\venv\Scripts\Activate.ps1
 pip install -r .\back\gestion-livraison-django-main\requirements.txt
 python C:\Projet_Django\back\gestion-livraison-django-main\manage.py runserver
 ```
